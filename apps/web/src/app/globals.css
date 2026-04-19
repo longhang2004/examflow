@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-parchment: #f5f4ed;
+    --color-ivory: #faf9f5;
+    --color-terracotta: #c96442;
+    --color-nearblack: #141413;
+    --color-border-cream: #f0eee6;
+  }
+
+  body {
+    color: var(--color-nearblack);
+    background-color: var(--color-parchment);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: Georgia, Cambria, serif;
+    font-weight: 500;
+  }
+
+  ::selection {
+    background-color: #c9644233;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

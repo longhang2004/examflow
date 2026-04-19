@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  ORG_ADMIN
+  SUPER_ADMIN
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum ExamStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  MULTIPLE_SELECT
+  TRUE_FALSE
+  FILL_BLANK
+  ESSAY
+}
+
+model User {
+  id             String        @id @default(uuid())
+  email          String        @unique
+  passwordHash   String
+  displayName    String
+  avatarUrl      String?
+  role           Role          @default(STUDENT)
+  plan           Plan          @default(FREE)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  questions  Question[]
+  exams      Exam[]
+  attempts   Attempt[]
+  ownedOrgs  Organization[]  @relation("OrgOwner")
+  parentOf   ParentStudent[] @relation("Parent")
+  studentOf  ParentStudent[] @relation("Student")
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  ownerId   String
+  owner     User     @relation("OrgOwner", fields: [ownerId], references: [id])
+  plan      Plan     @default(FREE)
+  members   User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  questions Question[]
+  exams     Exam[]
+}
+
+model Question {
+  id             String        @id @default(uuid())
+  creatorId      String
+  creator        User          @relation(fields: [creatorId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  type           QuestionType
+  content        String
+  config         Json
+  tags           String[]
+  difficulty     Int           @default(1)
+  isPublic       Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  examQuestions ExamQuestion[]
+}
+
+model Exam {
+  id             String        @id @default(uuid())
+  title          String
+  description    String?
+  creatorId      String
+  creator        User          @relation(fields: [creatorId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  config         Json
+  accessCode     String?       @unique
+  status         ExamStatus    @default(DRAFT)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  questions ExamQuestion[]
+  attempts  Attempt[]
+}
+
+model ExamQuestion {
+  id         String   @id @default(uuid())
+  examId     String
+  exam       Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  order      Int
+  point      Float    @default(1)
+
+  @@unique([examId, questionId])
+  @@unique([examId, order])
+}
+
+model Attempt {
+  id            String        @id @default(uuid())
+  examId        String
+  exam          Exam          @relation(fields: [examId], references: [id])
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  questionOrder String[]
+  answers       Json          @default("[]")
+  status        AttemptStatus @default(IN_PROGRESS)
+  startedAt     DateTime      @default(now())
+  submittedAt   DateTime?
+  totalScore    Float?
+  maxScore      Float?
+
+  @@index([examId, userId])
+}
+
+model ParentStudent {
+  id        String @id @default(uuid())
+  parentId  String
+  parent    User   @relation("Parent", fields: [parentId], references: [id])
+  studentId String
+  student   User   @relation("Student", fields: [studentId], references: [id])
+
+  @@unique([parentId, studentId])
+}
