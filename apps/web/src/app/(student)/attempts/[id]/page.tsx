@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
+import { AlertTriangle, Maximize, ShieldAlert } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { useExamStore } from '@/store/exam.store'
 import { Button } from '@/components/ui/Button'
@@ -132,22 +133,75 @@ function QuestionDisplay({ question, answer, onChange }: { question: any; answer
   return null
 }
 
+function WarningOverlay({
+  type,
+  tabSwitchCount,
+  onEnterFullscreen,
+}: {
+  type: 'tab-switch' | 'fullscreen-exit'
+  tabSwitchCount: number
+  onEnterFullscreen: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-lg bg-black/60">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 text-center space-y-5">
+        <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+          {type === 'tab-switch' ? (
+            <ShieldAlert className="w-8 h-8 text-red-600" />
+          ) : (
+            <Maximize className="w-8 h-8 text-red-600" />
+          )}
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold text-nearblack">
+            {type === 'tab-switch' ? 'Tab Switch Detected!' : 'Fullscreen Required'}
+          </h2>
+          <p className="text-sm text-stone mt-2">
+            {type === 'tab-switch'
+              ? `You left the exam tab. This has been recorded. (${tabSwitchCount} violation${tabSwitchCount > 1 ? 's' : ''})`
+              : 'You exited fullscreen mode. Please return to fullscreen to continue the exam.'}
+          </p>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-amber-800 text-left">
+              {type === 'tab-switch'
+                ? 'Repeated tab switches may result in your exam being flagged or auto-submitted.'
+                : 'The exam must be taken in fullscreen mode to maintain exam integrity.'}
+            </p>
+          </div>
+        </div>
+
+        <Button onClick={onEnterFullscreen} className="w-full">
+          <Maximize className="w-4 h-4" />
+          Enter Fullscreen & Continue
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function AttemptPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [savedStatus, setSavedStatus] = useState<'saved' | 'saving' | 'error'>('saved')
+  const [warningType, setWarningType] = useState<'tab-switch' | 'fullscreen-exit' | null>(null)
   const saveTimer = useRef<NodeJS.Timeout | null>(null)
   const timeSpentRef = useRef<Record<string, number>>({})
   const questionStartTime = useRef(Date.now())
 
-  const { attempt, questions, currentIndex, answers, viewedQuestions, setAttempt, setQuestions, setCurrentIndex, saveAnswer: storeAnswer, markViewed, incrementTabSwitch } = useExamStore()
+  const { attempt, questions, currentIndex, answers, viewedQuestions, tabSwitchCount, setAttempt, setQuestions, setCurrentIndex, saveAnswer: storeAnswer, markViewed, incrementTabSwitch, reset } = useExamStore()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: fetchError } = useQuery({
     queryKey: ['attempt', id],
     queryFn: () => api.get<any>(`/attempts/${id}`),
     enabled: !attempt || questions.length === 0,
+    retry: 2,
   })
 
   useEffect(() => {
@@ -157,8 +211,12 @@ export default function AttemptPage() {
   }, [data, attempt, setAttempt])
 
   useEffect(() => {
-    if (!data?.questions || questions.length > 0) return
-    const mapped = data.questions.map((eq: any) => ({
+    if (!data || questions.length > 0) return
+
+    const examQuestions = data.questions ?? data.exam?.questions
+    if (!examQuestions?.length) return
+
+    const mapped = examQuestions.map((eq: any) => ({
       ...eq.question,
       config: eq.question.config ?? {},
     }))
@@ -172,25 +230,30 @@ export default function AttemptPage() {
     }
   }, [currentIndex, questions, markViewed])
 
+  const enterFullscreen = useCallback(() => {
+    document.documentElement.requestFullscreen?.().then(() => {
+      setWarningType(null)
+    }).catch(() => {
+      setWarningType(null)
+    })
+  }, [])
+
   useEffect(() => {
+    if (!attempt || attempt.status !== 'IN_PROGRESS') return
+
     const handleVisibility = () => {
       if (document.hidden) {
         incrementTabSwitch()
-        const count = useExamStore.getState().tabSwitchCount + 1
-        alert(`Warning: You left the exam tab! (${count} time${count > 1 ? 's' : ''})`)
+        setWarningType('tab-switch')
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
 
-    const requestFullscreen = () => {
-      document.documentElement.requestFullscreen?.().catch(() => {})
-    }
-    requestFullscreen()
+    document.documentElement.requestFullscreen?.().catch(() => {})
 
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && attempt?.status === 'IN_PROGRESS') {
-        alert('Please return to fullscreen mode to continue the exam.')
-        requestFullscreen()
+      if (!document.fullscreenElement) {
+        setWarningType('fullscreen-exit')
       }
     }
     document.addEventListener('fullscreenchange', handleFullscreenChange)
@@ -200,7 +263,7 @@ export default function AttemptPage() {
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
       if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
     }
-  }, [incrementTabSwitch, attempt?.status])
+  }, [incrementTabSwitch, attempt?.status, attempt])
 
   const handleAnswerChange = useCallback((questionId: string, value: any) => {
     storeAnswer(questionId, value)
@@ -223,32 +286,68 @@ export default function AttemptPage() {
     }, 1000)
   }, [id, storeAnswer])
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     setSubmitting(true)
     try {
       await api.post(`/attempts/${id}/submit`)
+      reset()
       router.push(`/attempts/${id}/result`)
     } catch {
       setSubmitting(false)
     }
+  }, [id, reset, router])
+
+  if (fetchError) {
+    return (
+      <div className="min-h-screen bg-parchment flex items-center justify-center">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md text-center space-y-4">
+          <AlertTriangle className="w-10 h-10 text-error mx-auto" />
+          <h2 className="text-lg font-bold text-nearblack">Failed to load exam</h2>
+          <p className="text-sm text-stone">Could not connect to the server. Please check your connection and try again.</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    )
   }
 
-  if (isLoading || !attempt || questions.length === 0) return <p className="text-stone p-8">Loading...</p>
+  if (isLoading || !attempt || questions.length === 0) {
+    return (
+      <div className="min-h-screen bg-parchment flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-2 border-terracotta border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-stone text-sm">Loading exam questions...</p>
+        </div>
+      </div>
+    )
+  }
 
   const currentQuestion = questions[currentIndex]
   const currentAnswer = currentQuestion ? answers[currentQuestion.id] : undefined
   const answeredCount = questions.filter((q) => answers[q.id] !== undefined).length
   const unansweredCount = questions.length - answeredCount
-  const config = attempt.exam?.config as any ?? {}
+  const config = (attempt.exam?.config as any) ?? {}
 
   return (
     <div className="min-h-screen bg-parchment">
+      {warningType && (
+        <WarningOverlay
+          type={warningType}
+          tabSwitchCount={tabSwitchCount}
+          onEnterFullscreen={enterFullscreen}
+        />
+      )}
+
       <header className="bg-ivory border-b border-border-cream px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <span className="font-bold text-terracotta">ExamFlow</span>
           <span className="text-stone text-sm">{attempt.exam?.title ?? 'Exam'}</span>
         </div>
         <div className="flex items-center gap-4">
+          {tabSwitchCount > 0 && (
+            <span className="text-xs text-error font-medium px-2 py-0.5 bg-red-50 rounded">
+              {tabSwitchCount} tab violation{tabSwitchCount > 1 ? 's' : ''}
+            </span>
+          )}
           <span className={`text-xs px-2 py-0.5 rounded ${savedStatus === 'saved' ? 'text-green-600' : savedStatus === 'saving' ? 'text-amber-600' : 'text-error'}`}>
             {savedStatus === 'saved' ? 'Saved' : savedStatus === 'saving' ? 'Saving...' : 'Save error'}
           </span>

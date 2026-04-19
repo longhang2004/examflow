@@ -9,12 +9,23 @@ import { Card } from '@/components/ui/Card'
 export default function HistoryPage() {
   const router = useRouter()
 
-  const { data: attempts, isLoading } = useQuery({
+  const { data: attempts, isLoading, error } = useQuery({
     queryKey: ['my-attempts'],
     queryFn: () => api.get<any[]>('/attempts'),
   })
 
-  if (isLoading) return <p className="text-stone">Loading...</p>
+  if (isLoading) return <p className="text-stone p-4">Loading...</p>
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-nearblack">Attempt History</h1>
+        <Card>
+          <p className="text-center text-error py-8">Failed to load attempts. Please try again later.</p>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
