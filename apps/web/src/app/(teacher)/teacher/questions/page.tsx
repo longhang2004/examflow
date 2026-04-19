@@ -29,8 +29,13 @@ export default function QuestionsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['questions', { search: debouncedSearch, type, difficulty, page }],
-    queryFn: () =>
-      api.get<any>('/questions', { search: debouncedSearch, type, difficulty, page, limit: 20 }),
+    queryFn: () => {
+      const params: Record<string, any> = { page, limit: 20 }
+      if (debouncedSearch) params.search = debouncedSearch
+      if (type) params.type = type
+      if (difficulty) params.difficulty = difficulty
+      return api.get<any>('/questions', params)
+    },
   })
 
   const deleteMutation = useMutation({
