@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsUUID, Min } from 'class-validator';
+import { IsDefined, IsNumber, IsUUID, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SaveAnswerDto {
@@ -6,8 +6,8 @@ export class SaveAnswerDto {
   @IsUUID()
   questionId: string;
 
-  @ApiProperty()
-  @IsNotEmpty()
+  @ApiProperty({ description: 'Answer value — string, boolean, array, etc. depending on question type' })
+  @IsDefined()
   answer: any;
 
   @ApiProperty()

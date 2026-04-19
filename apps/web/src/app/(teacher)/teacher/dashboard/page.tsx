@@ -14,6 +14,11 @@ export default function TeacherDashboardPage() {
     queryFn: () => api.get<any>('/exams'),
   })
 
+  const { data: publishedExams } = useQuery({
+    queryKey: ['exams', { status: 'PUBLISHED' }],
+    queryFn: () => api.get<any>('/exams', { status: 'PUBLISHED' }),
+  })
+
   const { data: questions } = useQuery({
     queryKey: ['questions'],
     queryFn: () => api.get<any>('/questions'),
@@ -22,7 +27,7 @@ export default function TeacherDashboardPage() {
   const stats = [
     { label: 'Total Exams', value: exams?.meta?.total ?? 0, icon: FileText, bg: 'bg-terracotta/10', color: 'text-terracotta' },
     { label: 'Questions', value: questions?.meta?.total ?? 0, icon: BookOpen, bg: 'bg-emerald-50', color: 'text-emerald-600' },
-    { label: 'Published', value: exams?.data?.filter((e: any) => e.status === 'PUBLISHED').length ?? 0, icon: TrendingUp, bg: 'bg-amber-50', color: 'text-amber-600' },
+    { label: 'Published', value: publishedExams?.meta?.total ?? 0, icon: TrendingUp, bg: 'bg-amber-50', color: 'text-amber-600' },
   ]
 
   return (

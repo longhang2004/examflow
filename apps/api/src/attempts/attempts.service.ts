@@ -199,7 +199,16 @@ export class AttemptsService {
   async findOne(userId: string, attemptId: string) {
     const attempt = await this.prisma.attempt.findUnique({
       where: { id: attemptId },
-      include: { exam: true },
+      include: {
+        exam: {
+          include: {
+            questions: {
+              include: { question: true },
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+      },
     });
 
     if (!attempt) throw new NotFoundException('Attempt not found');
@@ -212,7 +221,7 @@ export class AttemptsService {
         answer,
         timeSpent,
       }));
-      return { ...rest, answers: sanitizedAnswers };
+      return { ...rest, answers: sanitizedAnswers, questions: attempt.exam.questions };
     }
 
     const config = attempt.exam.config as any;

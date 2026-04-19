@@ -146,11 +146,8 @@ export default function AttemptPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['attempt', id],
-    queryFn: async () => {
-      const res = await api.get<any>(`/attempts/${id}`)
-      return res
-    },
-    enabled: !attempt,
+    queryFn: () => api.get<any>(`/attempts/${id}`),
+    enabled: !attempt || questions.length === 0,
   })
 
   useEffect(() => {
@@ -160,8 +157,13 @@ export default function AttemptPage() {
   }, [data, attempt, setAttempt])
 
   useEffect(() => {
-    if (data?.questions) setQuestions(data.questions.map((eq: any) => eq.question))
-  }, [data, setQuestions])
+    if (!data?.questions || questions.length > 0) return
+    const mapped = data.questions.map((eq: any) => ({
+      ...eq.question,
+      config: eq.question.config ?? {},
+    }))
+    setQuestions(mapped)
+  }, [data, questions.length, setQuestions])
 
   useEffect(() => {
     if (questions.length > 0 && currentIndex < questions.length) {
