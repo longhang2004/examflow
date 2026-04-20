@@ -43,7 +43,7 @@ export function Modal({ isOpen, onClose, title, children, className = '' }: Moda
       >
         {title && (
           <div className="px-6 pt-6 pb-4 border-b border-border-cream">
-            <h2 className="text-lg font-serif">{title}</h2>
+            <h2 className="text-lg font-sans font-semibold tracking-tight">{title}</h2>
           </div>
         )}
         <div className="p-6">{children}</div>

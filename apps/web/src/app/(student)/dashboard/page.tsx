@@ -28,12 +28,18 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-serif text-nearblack">Welcome, {user?.displayName}!</h1>
+        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">Welcome, {user?.displayName}!</h1>
         <p className="text-olive mt-1">Ready to take an exam?</p>
+        <Link
+          href="/learning"
+          className="inline-block mt-2 text-sm text-terracotta hover:underline"
+        >
+          View learning stats and weak topics
+        </Link>
       </div>
 
       <Card variant="elevated" padding="lg">
-        <h2 className="font-serif text-lg text-nearblack mb-4">Enter Exam Code</h2>
+        <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack mb-4">Enter Exam Code</h2>
         <div className="flex gap-3">
           <input
             type="text"
@@ -53,7 +59,7 @@ export default function StudentDashboardPage() {
       {attempts && attempts.length > 0 && (
         <Card variant="bordered">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-serif text-lg text-nearblack">Recent Attempts</h2>
+            <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack">Recent Attempts</h2>
             <Link href="/history" className="text-sm text-terracotta hover:underline flex items-center gap-1">
               View all <ArrowRight className="w-3 h-3" />
             </Link>
@@ -73,7 +79,7 @@ export default function StudentDashboardPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   {a.totalScore !== null && a.maxScore ? (
-                    <span className="text-sm font-serif font-medium text-nearblack">
+                    <span className="text-sm font-sans font-medium tracking-tight text-nearblack">
                       {a.totalScore}/{a.maxScore}
                     </span>
                   ) : null}

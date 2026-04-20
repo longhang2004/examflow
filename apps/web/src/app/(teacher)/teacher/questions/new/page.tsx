@@ -93,7 +93,7 @@ export default function NewQuestionPage() {
   if (step === 1) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-serif">Create Question</h1>
+        <h1 className="text-2xl font-sans font-semibold tracking-tight">Create Question</h1>
         <p className="text-olive">Step 1: Choose question type</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {TYPES.map((t) => (
@@ -114,7 +114,7 @@ export default function NewQuestionPage() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-serif">Create Question</h1>
+        <h1 className="text-2xl font-sans font-semibold tracking-tight">Create Question</h1>
         <button type="button" onClick={() => setStep(1)} className="text-sm text-terracotta hover:underline">
           ← Change type
         </button>

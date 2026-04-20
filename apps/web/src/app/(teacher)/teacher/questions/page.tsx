@@ -46,7 +46,7 @@ export default function QuestionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-serif text-nearblack">Question Bank</h1>
+        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">Question Bank</h1>
         <Link href="/teacher/questions/new">
           <Button>
             <Plus className="w-4 h-4" />

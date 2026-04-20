@@ -33,7 +33,7 @@ export default function TeacherDashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-serif text-nearblack">Dashboard</h1>
+        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">Dashboard</h1>
         <p className="text-olive mt-1">Welcome back. Here&apos;s an overview of your content.</p>
       </div>
 
@@ -45,7 +45,7 @@ export default function TeacherDashboardPage() {
                 <s.icon className={`w-5 h-5 ${s.color}`} />
               </div>
               <div>
-                <p className="text-2xl font-serif text-nearblack">{s.value}</p>
+                <p className="text-2xl font-sans font-semibold tracking-tight text-nearblack">{s.value}</p>
                 <p className="text-sm text-stone">{s.label}</p>
               </div>
             </div>
@@ -64,7 +64,7 @@ export default function TeacherDashboardPage() {
 
       {exams?.data?.length > 0 && (
         <Card variant="bordered">
-          <h2 className="font-serif text-lg text-nearblack mb-4">Recent Exams</h2>
+          <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack mb-4">Recent Exams</h2>
           <div className="divide-y divide-border-cream">
             {exams.data.slice(0, 5).map((exam: any) => (
               <Link

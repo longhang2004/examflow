@@ -1,13 +1,49 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { ArrowDown, ArrowUp } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { Card } from '@/components/ui/Card'
+import { Badge, statusBadge } from '@/components/ui/Badge'
+
+type QSortKey = 'content' | 'totalAnswered' | 'correctRate' | 'averageTimeSpent'
+
+function QuestionSortButton(props: {
+  label: string
+  colKey: QSortKey
+  sortKey: QSortKey
+  sortDir: 'asc' | 'desc'
+  onToggle: (k: QSortKey) => void
+}) {
+  const active = props.sortKey === props.colKey
+  return (
+    <button
+      type="button"
+      onClick={() => props.onToggle(props.colKey)}
+      className={`inline-flex items-center gap-1 font-medium hover:text-charcoal ${
+        active ? 'text-charcoal' : ''
+      }`}
+    >
+      {props.label}
+      {active ? (
+        props.sortDir === 'asc' ? (
+          <ArrowUp className="w-3 h-3" />
+        ) : (
+          <ArrowDown className="w-3 h-3" />
+        )
+      ) : null}
+    </button>
+  )
+}
 
 export default function ExamResultsPage() {
   const { id } = useParams<{ id: string }>()
+  const [qSortKey, setQSortKey] = useState<QSortKey>('correctRate')
+  const [qSortDir, setQSortDir] = useState<'asc' | 'desc'>('asc')
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['exam-stats', id],
@@ -19,11 +55,56 @@ export default function ExamResultsPage() {
     queryFn: () => api.get<any[]>(`/exams/${id}/results`),
   })
 
+  const sortedQuestionStats = useMemo(() => {
+    const rows = [...(stats?.questionStats ?? [])]
+    rows.sort((a: any, b: any) => {
+      let cmp = 0
+      if (qSortKey === 'content') {
+        cmp = String(a.content).localeCompare(String(b.content))
+      } else {
+        cmp = (a[qSortKey] as number) - (b[qSortKey] as number)
+      }
+      return qSortDir === 'asc' ? cmp : -cmp
+    })
+    return rows
+  }, [stats?.questionStats, qSortKey, qSortDir])
+
+  function toggleQSort(key: QSortKey) {
+    if (qSortKey === key) {
+      setQSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setQSortKey(key)
+      setQSortDir(key === 'correctRate' ? 'asc' : 'desc')
+    }
+  }
+
+  function SortLabel({ label, k }: { label: string; k: QSortKey }) {
+    const active = qSortKey === k
+    return (
+      <button
+        type="button"
+        onClick={() => toggleQSort(k)}
+        className={`inline-flex items-center gap-1 font-medium hover:text-charcoal ${
+          active ? 'text-charcoal' : ''
+        }`}
+      >
+        {label}
+        {active ? (
+          qSortDir === 'asc' ? (
+            <ArrowUp className="w-3 h-3" />
+          ) : (
+            <ArrowDown className="w-3 h-3" />
+          )
+        ) : null}
+      </button>
+    )
+  }
+
   if (isLoading) return <p className="text-stone">Loading analytics...</p>
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-serif text-nearblack">Exam Results</h1>
+      <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">Exam Results</h1>
 
       <div className="grid grid-cols-4 gap-4">
         {[
@@ -47,7 +128,7 @@ export default function ExamResultsPage() {
               <XAxis dataKey="range" tick={{ fontSize: 11 }} />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="count" fill="#1E40AF" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill="#0071e3" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -55,18 +136,51 @@ export default function ExamResultsPage() {
 
       {stats?.questionStats?.length > 0 && (
         <Card>
-          <h2 className="font-semibold text-charcoal mb-4">Question Analysis</h2>
+          <h2 className="font-semibold text-charcoal mb-4">Question analysis</h2>
+          <p className="text-xs text-stone mb-3">Click a column header to sort. Low correct rate first helps spot difficult items.</p>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-stone">
-                <th className="pb-2 font-medium">Question</th>
-                <th className="pb-2 font-medium text-right">Answered</th>
-                <th className="pb-2 font-medium text-right">Correct Rate</th>
-                <th className="pb-2 font-medium text-right">Avg Time</th>
+                <th className="pb-2 text-left">
+                  <QuestionSortButton
+                    label="Question"
+                    colKey="content"
+                    sortKey={qSortKey}
+                    sortDir={qSortDir}
+                    onToggle={toggleQSort}
+                  />
+                </th>
+                <th className="pb-2 text-right">
+                  <QuestionSortButton
+                    label="Answered"
+                    colKey="totalAnswered"
+                    sortKey={qSortKey}
+                    sortDir={qSortDir}
+                    onToggle={toggleQSort}
+                  />
+                </th>
+                <th className="pb-2 text-right">
+                  <QuestionSortButton
+                    label="Correct rate"
+                    colKey="correctRate"
+                    sortKey={qSortKey}
+                    sortDir={qSortDir}
+                    onToggle={toggleQSort}
+                  />
+                </th>
+                <th className="pb-2 text-right">
+                  <QuestionSortButton
+                    label="Avg time"
+                    colKey="averageTimeSpent"
+                    sortKey={qSortKey}
+                    sortDir={qSortDir}
+                    onToggle={toggleQSort}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {stats.questionStats.map((q: any) => (
+              {sortedQuestionStats.map((q: any) => (
                 <tr key={q.questionId} className={q.correctRate < 0.3 ? 'bg-red-50' : ''}>
                   <td className="py-2 pr-4 text-charcoal truncate max-w-xs">{q.content}</td>
                   <td className="py-2 text-right text-stone">{q.totalAnswered}</td>
@@ -98,6 +212,7 @@ export default function ExamResultsPage() {
                 <th className="pb-2 font-medium text-right">Score</th>
                 <th className="pb-2 font-medium text-right">Status</th>
                 <th className="pb-2 font-medium text-right">Submitted</th>
+                <th className="pb-2 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -108,12 +223,22 @@ export default function ExamResultsPage() {
                     {a.totalScore !== null ? `${a.totalScore}/${a.maxScore}` : '-'}
                   </td>
                   <td className="py-2 text-right">
-                    <span className={`text-xs px-2 py-0.5 rounded ${a.status === 'GRADED' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {a.status}
-                    </span>
+                    <Badge variant={statusBadge(a.status)}>{a.status}</Badge>
                   </td>
                   <td className="py-2 text-right text-stone">
                     {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '-'}
+                  </td>
+                  <td className="py-2 text-right">
+                    <Link
+                      href={`/teacher/exams/${id}/grade/${a.id}`}
+                      className={`text-xs font-medium px-3 py-1 rounded transition-colors ${
+                        a.status === 'SUBMITTED'
+                          ? 'bg-terracotta text-ivory hover:bg-terracotta-light'
+                          : 'bg-sand text-charcoal hover:bg-border-warm'
+                      }`}
+                    >
+                      {a.status === 'SUBMITTED' ? 'Grade' : 'Review'}
+                    </Link>
                   </td>
                 </tr>
               ))}

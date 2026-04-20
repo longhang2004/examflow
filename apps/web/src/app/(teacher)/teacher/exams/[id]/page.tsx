@@ -178,7 +178,7 @@ export default function ExamDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-serif text-nearblack">{exam.title}</h1>
+          <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">{exam.title}</h1>
           <Badge variant={statusBadge(exam.status)}>{exam.status}</Badge>
         </div>
         <div className="flex gap-2">

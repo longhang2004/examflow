@@ -10,6 +10,7 @@ import { RedisService } from '../redis/redis.service';
 import { GradingService } from './grading.service';
 import { StartAttemptDto } from './dto/start-attempt.dto';
 import { SaveAnswerDto } from './dto/save-answer.dto';
+import { GradeAttemptDto } from './dto/grade-answer.dto';
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -258,6 +259,84 @@ export class AttemptsService {
         exam: { select: { title: true } },
       },
       orderBy: { startedAt: 'desc' },
+    });
+  }
+
+  async reviewAttempt(teacherId: string, attemptId: string) {
+    const attempt = await this.prisma.attempt.findUnique({
+      where: { id: attemptId },
+      include: {
+        user: { select: { id: true, displayName: true, email: true } },
+        exam: {
+          include: {
+            questions: {
+              include: { question: true },
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!attempt) throw new NotFoundException('Attempt not found');
+
+    const exam = attempt.exam;
+    const user = await this.prisma.user.findUnique({ where: { id: teacherId } });
+    const isOwner = exam.creatorId === teacherId;
+    const isOrgAdmin =
+      user?.role === 'ORG_ADMIN' && exam.organizationId === user.organizationId;
+
+    if (!isOwner && !isOrgAdmin) {
+      throw new ForbiddenException('Only the exam creator can review attempts');
+    }
+
+    return attempt;
+  }
+
+  async gradeAttempt(teacherId: string, attemptId: string, dto: GradeAttemptDto) {
+    const attempt = await this.prisma.attempt.findUnique({
+      where: { id: attemptId },
+      include: { exam: true },
+    });
+
+    if (!attempt) throw new NotFoundException('Attempt not found');
+    if (attempt.status === AttemptStatus.IN_PROGRESS) {
+      throw new BadRequestException('Cannot grade an in-progress attempt');
+    }
+
+    const exam = attempt.exam;
+    const user = await this.prisma.user.findUnique({ where: { id: teacherId } });
+    const isOwner = exam.creatorId === teacherId;
+    const isOrgAdmin =
+      user?.role === 'ORG_ADMIN' && exam.organizationId === user.organizationId;
+
+    if (!isOwner && !isOrgAdmin) {
+      throw new ForbiddenException('Only the exam creator can grade attempts');
+    }
+
+    const answers = attempt.answers as any[];
+    for (const grade of dto.grades) {
+      const idx = answers.findIndex((a) => a.questionId === grade.questionId);
+      if (idx === -1) continue;
+
+      answers[idx] = {
+        ...answers[idx],
+        pointEarned: grade.pointEarned,
+        isCorrect: grade.isCorrect ?? (grade.pointEarned > 0),
+        ...(grade.feedback && { feedback: grade.feedback }),
+      };
+    }
+
+    const totalScore = answers.reduce((sum, a) => sum + (a.pointEarned ?? 0), 0);
+    const allGraded = answers.every((a) => a.pointEarned !== null && a.pointEarned !== undefined);
+
+    return this.prisma.attempt.update({
+      where: { id: attemptId },
+      data: {
+        answers,
+        totalScore,
+        status: allGraded ? AttemptStatus.GRADED : attempt.status,
+      },
     });
   }
 }

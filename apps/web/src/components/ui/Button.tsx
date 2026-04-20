@@ -9,15 +9,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles = {
   primary:
-    'bg-terracotta text-ivory hover:bg-terracotta-light shadow-ring-brand',
+    'bg-terracotta text-ivory hover:bg-terracotta-light shadow-sm focus-visible:ring-offset-2',
   secondary:
-    'bg-sand text-charcoal hover:bg-border-warm shadow-ring',
+    'bg-sand text-charcoal border border-border-cream hover:bg-border-warm/50 shadow-sm',
   danger:
-    'bg-error text-ivory hover:bg-red-700 shadow-[0px_0px_0px_1px_#b53333]',
+    'bg-error text-ivory hover:bg-red-700 shadow-sm',
   ghost:
-    'bg-transparent text-olive hover:bg-sand hover:text-charcoal',
+    'bg-transparent text-link hover:underline hover:bg-transparent',
   dark:
-    'bg-nearblack text-silver border border-darksurface hover:bg-darksurface',
+    'bg-nearblack text-ivory border border-transparent hover:bg-charcoal-warm',
 }
 
 const sizeStyles = {

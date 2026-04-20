@@ -60,7 +60,7 @@ export default function RegisterPage() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      <h2 className="text-xl font-serif text-nearblack">Create your account</h2>
+      <h2 className="text-xl font-sans font-semibold tracking-tight text-nearblack">Create your account</h2>
 
       {error && <Alert type="error" message={error} />}
 

@@ -196,7 +196,7 @@ export default function EditQuestionPage() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-serif">Edit Question</h1>
+          <h1 className="text-2xl font-sans font-semibold tracking-tight">Edit Question</h1>
           <p className="text-sm text-stone mt-1">Type: {TYPE_LABELS[question.type]}</p>
         </div>
         <button type="button" onClick={() => router.back()} className="text-sm text-terracotta hover:underline">

@@ -4,27 +4,33 @@
 
 @layer base {
   :root {
-    --color-parchment: #f5f4ed;
-    --color-ivory: #faf9f5;
-    --color-terracotta: #c96442;
-    --color-nearblack: #141413;
-    --color-border-cream: #f0eee6;
+    --color-page: #f5f5f7;
+    --color-surface: #ffffff;
+    --color-accent: #0071e3;
+    --color-text: #1d1d1f;
+    --color-border: #e5e5ea;
   }
 
   body {
-    color: var(--color-nearblack);
-    background-color: var(--color-parchment);
+    color: var(--color-text);
+    background-color: var(--color-page);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: Georgia, Cambria, serif;
-    font-weight: 500;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: inherit;
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
 
   ::selection {
-    background-color: #c9644233;
+    background-color: rgba(0, 113, 227, 0.22);
   }
 }
 

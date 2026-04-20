@@ -46,7 +46,7 @@ export default function LoginPage() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      <h2 className="text-xl font-serif text-nearblack">Sign in to your account</h2>
+      <h2 className="text-xl font-sans font-semibold tracking-tight text-nearblack">Sign in to your account</h2>
 
       {error && <Alert type="error" message={error} />}
 

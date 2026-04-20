@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -12,8 +13,12 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagg
 import { AttemptsService } from './attempts.service';
 import { StartAttemptDto } from './dto/start-attempt.dto';
 import { SaveAnswerDto } from './dto/save-answer.dto';
+import { GradeAttemptDto } from './dto/grade-answer.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 
 @ApiTags('Attempts')
 @ApiBearerAuth()
@@ -60,5 +65,27 @@ export class AttemptsController {
   @Get()
   findMyAttempts(@CurrentUser() user: any, @Query('examId') examId?: string) {
     return this.attemptsService.findMyAttempts(user.id, examId);
+  }
+
+  @ApiOperation({ summary: 'Review a student attempt (teacher only)' })
+  @ApiResponse({ status: 200, description: 'Full attempt with questions and answers' })
+  @UseGuards(RolesGuard)
+  @Roles(Role.TEACHER, Role.ORG_ADMIN)
+  @Get(':id/review')
+  reviewAttempt(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.attemptsService.reviewAttempt(user.id, id);
+  }
+
+  @ApiOperation({ summary: 'Grade essay/text answers manually (teacher only)' })
+  @ApiResponse({ status: 200, description: 'Answers graded, status updated if fully graded' })
+  @UseGuards(RolesGuard)
+  @Roles(Role.TEACHER, Role.ORG_ADMIN)
+  @Patch(':id/grade')
+  gradeAttempt(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: GradeAttemptDto,
+  ) {
+    return this.attemptsService.gradeAttempt(user.id, id, dto);
   }
 }

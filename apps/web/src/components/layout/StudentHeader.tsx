@@ -7,6 +7,7 @@ import { LogOut, User } from 'lucide-react'
 
 const links = [
   { href: '/dashboard', label: 'Home' },
+  { href: '/learning', label: 'My learning' },
   { href: '/history', label: 'History' },
 ]
 
@@ -23,7 +24,7 @@ export function StudentHeader() {
   return (
     <header className="bg-ivory border-b border-border-cream px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-8">
-        <Link href="/dashboard" className="text-lg font-serif text-nearblack">
+        <Link href="/dashboard" className="text-lg font-sans font-semibold tracking-tight text-nearblack">
           ExamFlow
         </Link>
         <nav className="flex items-center gap-1">

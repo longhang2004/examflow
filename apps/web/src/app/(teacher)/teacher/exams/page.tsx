@@ -28,7 +28,7 @@ export default function ExamsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-serif text-nearblack">My Exams</h1>
+        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">My Exams</h1>
         <Link href="/teacher/exams/new">
           <Button><Plus className="w-4 h-4" />Create Exam</Button>
         </Link>
