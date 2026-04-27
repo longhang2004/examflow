@@ -37,7 +37,7 @@ export function Modal({ isOpen, onClose, title, children, className = '' }: Moda
         className={`
           relative bg-ivory rounded-t-very-rounded shadow-whisper sm:rounded-very-rounded
           border border-border-cream
-          w-full mx-0 max-h-[92vh] overflow-y-auto sm:mx-4 sm:max-h-[85vh]
+          w-[calc(100vw-1rem)] mx-2 max-h-[92vh] overflow-y-auto overflow-x-hidden sm:mx-4 sm:w-full sm:max-h-[85vh]
           ${className || 'max-w-lg'}
         `}
       >
@@ -46,7 +46,7 @@ export function Modal({ isOpen, onClose, title, children, className = '' }: Moda
             <h2 className="text-lg font-sans font-semibold tracking-tight">{title}</h2>
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="min-w-0 p-4 sm:p-6">{children}</div>
       </div>
     </div>
   )

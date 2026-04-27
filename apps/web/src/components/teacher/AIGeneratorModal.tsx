@@ -219,8 +219,8 @@ export function AIGeneratorModal({
   const canProceedStep2 = selectedTypes.length > 0 && count >= 1
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="">
-      <div className="w-full max-w-3xl sm:min-w-[520px]">
+    <Modal isOpen={isOpen} onClose={onClose} title="" className="max-w-3xl">
+      <div className="min-w-0 max-w-full overflow-x-hidden">
         {/* Header */}
         <div className="mb-6 flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-comfortable bg-terracotta/10 ring-1 ring-inset ring-terracotta/20">
@@ -323,18 +323,18 @@ export function AIGeneratorModal({
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-charcoal block mb-2">Loại câu hỏi cần sinh</label>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid min-w-0 gap-2 md:grid-cols-2">
                 {QUESTION_TYPES.map((t) => (
                   <button
                     type="button"
                     key={t.value}
                     onClick={() => toggleType(t.value)}
-                    className={`flex items-center justify-between rounded-comfortable border px-3 py-2 text-left text-sm transition ${
+                    className={`flex min-w-0 items-center justify-between gap-2 rounded-comfortable border px-3 py-2 text-left text-sm transition ${
                       selectedTypes.includes(t.value) ? 'border-terracotta bg-terracotta/5 text-nearblack' : 'border-border-warm text-stone hover:border-ring-warm'
                     }`}
                   >
-                    <span>{t.label}</span>
-                    {selectedTypes.includes(t.value) && <Check className="h-4 w-4 text-terracotta" />}
+                    <span className="min-w-0 truncate">{t.label}</span>
+                    {selectedTypes.includes(t.value) && <Check className="h-4 w-4 shrink-0 text-terracotta" />}
                   </button>
                 ))}
               </div>
@@ -360,17 +360,17 @@ export function AIGeneratorModal({
 
             <div>
               <label className="text-sm font-medium text-charcoal block mb-2">Độ khó</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid min-w-0 grid-cols-3 gap-2">
                 {DIFFICULTIES.map((d) => (
                   <button
                     type="button"
                     key={d.value}
                     onClick={() => setDifficulty(d.value as 1 | 2 | 3)}
-                    className={`rounded-comfortable border px-3 py-2 text-sm transition ${
+                    className={`min-w-0 rounded-comfortable border px-2 py-2 text-sm transition ${
                       difficulty === d.value ? 'border-terracotta bg-terracotta/5 text-nearblack font-medium' : 'border-transparent bg-sand text-stone'
                     }`}
                   >
-                    {d.label}
+                    <span className="block truncate">{d.label}</span>
                   </button>
                 ))}
               </div>
@@ -378,17 +378,17 @@ export function AIGeneratorModal({
 
             <div>
               <label className="text-sm font-medium text-charcoal block mb-2">Ngôn ngữ</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid min-w-0 grid-cols-2 gap-2">
                 {[{ v: 'vi' as const, l: 'Tiếng Việt' }, { v: 'en' as const, l: 'English' }].map((lang) => (
                   <button
                     type="button"
                     key={lang.v}
                     onClick={() => setLanguage(lang.v)}
-                    className={`rounded-comfortable border px-3 py-2 text-sm transition ${
+                    className={`min-w-0 rounded-comfortable border px-2 py-2 text-sm transition ${
                       language === lang.v ? 'border-terracotta bg-terracotta/5 text-nearblack font-medium' : 'border-transparent bg-sand text-stone'
                     }`}
                   >
-                    {lang.l}
+                    <span className="block truncate">{lang.l}</span>
                   </button>
                 ))}
               </div>
@@ -405,8 +405,8 @@ export function AIGeneratorModal({
               />
             </div>
 
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-              <Button type="button" variant="secondary" onClick={() => setStep(1)}>
+            <div className="flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+              <Button type="button" variant="secondary" onClick={() => setStep(1)} className="w-full sm:w-auto">
                 <ChevronLeft className="w-4 h-4" /> Quay lại
               </Button>
               <Button
@@ -414,9 +414,10 @@ export function AIGeneratorModal({
                 onClick={() => generateMutation.mutate()}
                 loading={generateMutation.isPending}
                 disabled={!canProceedStep2}
+                className="w-full sm:w-auto"
               >
                 <Sparkles className="w-4 h-4" />
-                {generateMutation.isPending ? 'AI đang phân tích...' : 'Sinh câu hỏi'}
+                <span className="truncate">{generateMutation.isPending ? 'AI đang phân tích...' : 'Sinh câu hỏi'}</span>
               </Button>
             </div>
 
@@ -436,12 +437,12 @@ export function AIGeneratorModal({
         {/* Step 3: Review & Save */}
         {step === 3 && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-stone">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="min-w-0 text-sm text-stone">
                 Đã sinh {generatedQuestions.length} câu hỏi. Chọn câu muốn thêm vào{' '}
                 {examId ? 'đề thi' : 'ngân hàng'}.
               </p>
-              <div className="flex gap-2">
+              <div className="flex shrink-0 gap-2">
                 <button
                   type="button"
                   onClick={() => setSelectedQuestions(new Set(generatedQuestions.map((_, i) => i)))}
@@ -494,12 +495,12 @@ export function AIGeneratorModal({
               ))}
             </div>
 
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" onClick={() => setStep(2)}>
+            <div className="flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <Button type="button" variant="secondary" onClick={() => setStep(2)} className="w-full sm:w-auto">
                   <ChevronLeft className="w-4 h-4" /> Quay lại
                 </Button>
-                <Button type="button" variant="secondary" onClick={() => generateMutation.mutate()} loading={generateMutation.isPending}>
+                <Button type="button" variant="secondary" onClick={() => generateMutation.mutate()} loading={generateMutation.isPending} className="w-full sm:w-auto">
                   <RefreshCw className="w-4 h-4" /> Sinh lại
                 </Button>
               </div>
@@ -508,8 +509,9 @@ export function AIGeneratorModal({
                 onClick={handleSaveSelected}
                 loading={saving}
                 disabled={selectedQuestions.size === 0}
+                className="w-full sm:w-auto"
               >
-                Thêm {selectedQuestions.size} câu vào {examId ? 'đề thi' : 'ngân hàng'}
+                <span className="truncate">Thêm {selectedQuestions.size} câu vào {examId ? 'đề thi' : 'ngân hàng'}</span>
               </Button>
             </div>
           </div>
