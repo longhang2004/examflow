@@ -2,7 +2,17 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Sparkles, Upload, FileText, Check, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  BookOpen,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  FileText,
+  RefreshCw,
+  Sparkles,
+  Upload,
+} from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -28,6 +38,21 @@ const QUESTION_TYPES = [
   { value: 'ESSAY', label: 'Tự luận' },
 ]
 
+const SOURCE_MODES = [
+  {
+    value: 'knowledge',
+    label: 'Tạo đề từ tài liệu kiến thức',
+    description: 'Dùng giáo trình, ghi chú, lý thuyết để AI tạo câu hỏi mới bám sát nội dung.',
+    icon: BookOpen,
+  },
+  {
+    value: 'test',
+    label: 'Nhập đề từ file đề thi',
+    description: 'Dùng đề thi đã có để AI trích xuất câu hỏi, lựa chọn, đáp án và giải thích nếu có.',
+    icon: ClipboardList,
+  },
+] as const
+
 const DIFFICULTIES = [
   { value: 1, label: 'Dễ' },
   { value: 2, label: 'Trung bình' },
@@ -42,6 +67,18 @@ const ACCEPTED_MIME_TYPES = [
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 
+type SourceMode = (typeof SOURCE_MODES)[number]['value']
+
+function getAiErrorMessage(error: any) {
+  const message =
+    error?.response?.data?.error?.message ??
+    error?.response?.data?.message ??
+    error?.message ??
+    'AI không thể xử lý yêu cầu. Vui lòng thử lại.'
+
+  return Array.isArray(message) ? message[0] : String(message)
+}
+
 export function AIGeneratorModal({
   isOpen,
   onClose,
@@ -51,6 +88,7 @@ export function AIGeneratorModal({
 }: AIGeneratorModalProps) {
   const queryClient = useQueryClient()
   const [step, setStep] = useState(1)
+  const [sourceMode, setSourceMode] = useState<SourceMode>('knowledge')
   const [inputMode, setInputMode] = useState<'file' | 'text'>('text')
   const [file, setFile] = useState<File | null>(null)
   const [text, setText] = useState('')
@@ -80,6 +118,7 @@ export function AIGeneratorModal({
         formData.append('count', String(count))
         formData.append('difficulty', String(difficulty))
         formData.append('language', language)
+        formData.append('sourceMode', sourceMode)
         selectedTypes.forEach((t) => formData.append('questionTypes', t))
         if (additionalInstructions) formData.append('additionalInstructions', additionalInstructions)
 
@@ -92,7 +131,8 @@ export function AIGeneratorModal({
         })
         if (!res.ok) {
           const payload = await res.json().catch(() => null)
-          throw new Error(payload?.error?.message ?? 'Failed to generate questions from this file')
+          const message = payload?.error?.message ?? payload?.message ?? 'Failed to generate questions from this file'
+          throw new Error(Array.isArray(message) ? message[0] : message)
         }
         const payload = await res.json()
         return payload?.data ?? payload
@@ -102,6 +142,7 @@ export function AIGeneratorModal({
           count,
           difficulty,
           language,
+          sourceMode,
           questionTypes: selectedTypes,
           additionalInstructions: additionalInstructions || undefined,
         })
@@ -200,6 +241,14 @@ export function AIGeneratorModal({
     setInputError('')
   }
 
+  const handleSourceModeChange = (mode: SourceMode) => {
+    setSourceMode(mode)
+    setInputMode(mode === 'test' ? 'file' : 'text')
+    setInputError('')
+    setFile(null)
+    setText('')
+  }
+
   const toggleType = (t: string) => {
     setSelectedTypes((prev) =>
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t],
@@ -228,7 +277,7 @@ export function AIGeneratorModal({
           </div>
           <div className="min-w-0">
             <h2 className="text-lg font-bold text-nearblack">
-              {examId ? 'Sinh câu hỏi cho đề thi' : 'Sinh câu hỏi bằng AI'}
+              {examId ? 'AI cho đề thi' : 'AI tạo/nhập câu hỏi'}
             </h2>
             <p className="text-sm text-stone">
               Bước {step}/3{usage ? ` · Còn ${Math.max(usage.limit - usage.used, 0)} lượt trong giờ này` : ''}
@@ -249,6 +298,36 @@ export function AIGeneratorModal({
         {/* Step 1: Upload/Paste */}
         {step === 1 && (
           <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-charcoal">Chọn chế độ AI</label>
+              <div className="grid gap-2 md:grid-cols-2">
+                {SOURCE_MODES.map((mode) => {
+                  const active = sourceMode === mode.value
+                  const Icon = mode.icon
+                  return (
+                    <button
+                      key={mode.value}
+                      type="button"
+                      onClick={() => handleSourceModeChange(mode.value)}
+                      className={`flex min-w-0 items-start gap-3 rounded-comfortable border p-3 text-left transition ${
+                        active ? 'border-terracotta bg-terracotta/5' : 'border-border-cream bg-ivory hover:border-ring-warm'
+                      }`}
+                    >
+                      <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-comfortable ${
+                        active ? 'bg-terracotta/10 text-terracotta' : 'bg-sand text-stone'
+                      }`}>
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-nearblack">{mode.label}</span>
+                        <span className="mt-1 block text-xs leading-5 text-stone">{mode.description}</span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             <SegmentedControl
               ariaLabel="AI input source"
               value={inputMode}
@@ -264,7 +343,7 @@ export function AIGeneratorModal({
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="Dán nội dung tài liệu vào đây..."
+                  placeholder={sourceMode === 'test' ? 'Dán nội dung đề thi, gồm câu hỏi và đáp án nếu có...' : 'Dán nội dung tài liệu kiến thức hoặc lý thuyết vào đây...'}
                   className="h-48 w-full resize-none rounded-comfortable border border-border-warm bg-ivory px-3 py-2 text-sm text-nearblack focus:outline-none focus:ring-2 focus:ring-focus/20"
                 />
                 <p className="mt-1 text-right text-xs text-stone">{text.length} / 15000</p>
@@ -303,7 +382,9 @@ export function AIGeneratorModal({
                   <div className="space-y-2">
                     <Upload className="w-8 h-8 mx-auto text-stone" />
                     <p className="text-sm font-medium text-charcoal">Kéo thả hoặc click để chọn file</p>
-                    <p className="text-xs text-stone">PDF, DOCX, TXT — tối đa 10MB</p>
+                    <p className="text-xs text-stone">
+                      {sourceMode === 'test' ? 'File đề thi PDF, DOCX, TXT' : 'File kiến thức PDF, DOCX, TXT'} — tối đa 10MB
+                    </p>
                   </div>
                 )}
               </div>
@@ -322,7 +403,9 @@ export function AIGeneratorModal({
         {step === 2 && (
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-charcoal block mb-2">Loại câu hỏi cần sinh</label>
+              <label className="text-sm font-medium text-charcoal block mb-2">
+                {sourceMode === 'test' ? 'Loại câu hỏi cần nhập' : 'Loại câu hỏi cần sinh'}
+              </label>
               <div className="grid min-w-0 gap-2 md:grid-cols-2">
                 {QUESTION_TYPES.map((t) => (
                   <button
@@ -342,7 +425,9 @@ export function AIGeneratorModal({
 
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <label className="text-sm font-medium text-charcoal">Số câu hỏi</label>
+                <label className="text-sm font-medium text-charcoal">
+                  {sourceMode === 'test' ? 'Số câu hỏi tối đa' : 'Số câu hỏi'}
+                </label>
                 <span className="rounded-subtle bg-sand px-2 py-0.5 text-xs font-medium text-charcoal">{count}</span>
               </div>
               <input
@@ -399,7 +484,7 @@ export function AIGeneratorModal({
               <textarea
                 value={additionalInstructions}
                 onChange={(e) => setAdditionalInstructions(e.target.value)}
-                placeholder="VD: Tập trung vào phần định nghĩa và ví dụ"
+                placeholder={sourceMode === 'test' ? 'VD: Giữ nguyên thứ tự câu trong đề gốc' : 'VD: Tập trung vào phần định nghĩa và ví dụ'}
                 maxLength={500}
                 className="h-20 w-full resize-none rounded-comfortable border border-border-warm bg-ivory px-3 py-2 text-sm text-nearblack focus:outline-none focus:ring-2 focus:ring-focus/20"
               />
@@ -417,7 +502,13 @@ export function AIGeneratorModal({
                 className="w-full sm:w-auto"
               >
                 <Sparkles className="w-4 h-4" />
-                <span className="truncate">{generateMutation.isPending ? 'AI đang phân tích...' : 'Sinh câu hỏi'}</span>
+                <span className="truncate">
+                  {generateMutation.isPending
+                    ? 'AI đang phân tích...'
+                    : sourceMode === 'test'
+                      ? 'Nhập câu hỏi'
+                      : 'Sinh câu hỏi'}
+                </span>
               </Button>
             </div>
 
@@ -426,7 +517,7 @@ export function AIGeneratorModal({
                 type="error"
                 message={
                   generateMutation.error instanceof Error
-                    ? generateMutation.error.message
+                    ? getAiErrorMessage(generateMutation.error)
                     : 'Có lỗi xảy ra. Vui lòng thử lại.'
                 }
               />
@@ -439,7 +530,7 @@ export function AIGeneratorModal({
           <div className="space-y-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="min-w-0 text-sm text-stone">
-                Đã sinh {generatedQuestions.length} câu hỏi. Chọn câu muốn thêm vào{' '}
+                Đã {sourceMode === 'test' ? 'nhập' : 'sinh'} {generatedQuestions.length} câu hỏi. Chọn câu muốn thêm vào{' '}
                 {examId ? 'đề thi' : 'ngân hàng'}.
               </p>
               <div className="flex shrink-0 gap-2">

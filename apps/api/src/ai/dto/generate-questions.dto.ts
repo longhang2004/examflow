@@ -16,6 +16,15 @@ import { Transform, Type } from 'class-transformer';
 import { QuestionType } from '@prisma/client';
 
 export class GenerateQuestionsDto {
+  @ApiPropertyOptional({
+    description: 'How the source should be interpreted',
+    enum: ['knowledge', 'test'],
+    default: 'knowledge',
+  })
+  @IsIn(['knowledge', 'test'])
+  @IsOptional()
+  sourceMode?: 'knowledge' | 'test' = 'knowledge';
+
   @ApiProperty({
     description: 'Array of question types to generate',
     example: ['MULTIPLE_CHOICE', 'TRUE_FALSE'],

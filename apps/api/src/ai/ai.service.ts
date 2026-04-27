@@ -1,4 +1,5 @@
 import {
+  BadGatewayException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -99,6 +100,36 @@ export class AiService {
     }
   }
 
+  private getProviderErrorMessage(error: any): string {
+    const message =
+      error?.response?.data?.error?.message ||
+      error?.error?.message ||
+      error?.message ||
+      'Unknown AI provider error';
+
+    return String(message).replace(this.getApiKey() ?? '', '[redacted]');
+  }
+
+  private async createJsonCompletion(openai: OpenAI, systemPrompt: string, userPrompt: string) {
+    const payload: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+      model: this.getModel(),
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      max_tokens: 4000,
+      temperature: 0.7,
+    };
+
+    // Gemini's OpenAI-compatible endpoint is stricter across model versions. The prompt
+    // already requires JSON, so only OpenAI gets the formal response_format hint.
+    if (this.provider === 'openai') {
+      payload.response_format = { type: 'json_object' };
+    }
+
+    return openai.chat.completions.create(payload);
+  }
+
   private async getUserPlanLimit(userId: string): Promise<number> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -174,7 +205,40 @@ export class AiService {
 
     const sanitizedText = this.documentParser.sanitizeText(text);
 
-    const systemPrompt = `Bạn là chuyên gia giáo dục có nhiệm vụ tạo câu hỏi kiểm tra từ nội dung tài liệu.
+    const sourceMode = dto.sourceMode ?? 'knowledge';
+    const isImportMode = sourceMode === 'test';
+
+    const systemPrompt = isImportMode
+      ? `Bạn là chuyên gia nhập liệu đề thi. Nhiệm vụ của bạn là đọc một đề kiểm tra đã có sẵn và trích xuất câu hỏi, đáp án, giải thích nếu có.
+
+Quy tắc bắt buộc:
+1. Không sáng tạo câu hỏi mới. Chỉ nhập/xử lý câu hỏi có trong đề gốc
+2. Nếu đề thiếu đáp án, hãy suy luận đáp án từ nội dung đề khi có đủ thông tin; nếu không đủ thông tin, bỏ qua câu đó
+3. Ngôn ngữ: ${dto.language === 'vi' ? 'Tiếng Việt' : 'English'}
+4. Trả về JSON hợp lệ, không có text thừa trước hoặc sau JSON
+5. Có thể dùng Markdown ngắn gọn trong content, options.text, explanation, rubric: **bold**, _italic_, \`code\`, xuống dòng
+6. Nếu tài liệu có công thức, giữ công thức ở dạng text/Markdown dễ đọc; không tạo đường dẫn ảnh giả
+
+Format JSON output:
+{
+  "questions": [
+    {
+      "type": "MULTIPLE_CHOICE | MULTIPLE_SELECT | TRUE_FALSE | FILL_BLANK | ESSAY",
+      "content": "Nội dung câu hỏi",
+      "config": {
+        // MULTIPLE_CHOICE: { options: [{ id: "a", text: "..." }, ...], correctAnswer: "a" }
+        // MULTIPLE_SELECT: { options: [{ id: "a", text: "..." }, ...], correctAnswers: ["a", "b"], partialCredit: true }
+        // TRUE_FALSE: { correctAnswer: true | false }
+        // FILL_BLANK: { correctAnswers: ["answer1", "answer2"], caseSensitive: false }
+        // ESSAY: { rubric: "Rubric text", maxWords: 500 }
+      },
+      "tags": ["tag1", "tag2"],
+      "difficulty": 1 | 2 | 3,
+      "explanation": "Giải thích nếu có hoặc nếu suy luận được"
+    }
+  ]
+}`
+      : `Bạn là chuyên gia giáo dục có nhiệm vụ tạo câu hỏi kiểm tra từ nội dung tài liệu.
 
 Quy tắc bắt buộc:
 1. Câu hỏi phải bám sát nội dung tài liệu, không bịa đặt thông tin
@@ -211,28 +275,21 @@ ${sanitizedText}
 ---
 
 Yêu cầu:
-- Tạo ${dto.count} câu hỏi
+- ${isImportMode ? `Nhập tối đa ${dto.count} câu hỏi từ đề gốc` : `Tạo ${dto.count} câu hỏi mới từ tài liệu lý thuyết/kiến thức`}
 - Loại câu hỏi: ${dto.questionTypes.join(', ')}
 - Độ khó: ${dto.difficulty} (1=dễ, 2=trung bình, 3=khó)
 ${dto.additionalInstructions ? `- ${dto.additionalInstructions}` : ''}
 
-Phân bổ số lượng đều nhau giữa các loại câu hỏi được yêu cầu.`;
+${isImportMode
+  ? 'Ưu tiên giữ nguyên thứ tự, nội dung, đáp án và lựa chọn trong đề gốc.'
+  : 'Phân bổ số lượng đều nhau giữa các loại câu hỏi được yêu cầu.'}`;
 
     let response: any;
     let tokensUsed = 0;
 
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const completion = await openai.chat.completions.create({
-          model: this.getModel(),
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          max_tokens: 4000,
-          temperature: 0.7,
-          response_format: { type: 'json_object' },
-        });
+        const completion = await this.createJsonCompletion(openai, systemPrompt, userPrompt);
 
         tokensUsed = completion.usage?.total_tokens ?? 0;
         const content = completion.choices[0]?.message?.content ?? '';
@@ -251,12 +308,13 @@ Phân bổ số lượng đều nhau giữa các loại câu hỏi được yêu
         break; // Success
       } catch (error: any) {
         if (attempt === 1) {
-          this.logger.error(`AI generation failed after 2 attempts: ${error.message}`);
-          throw new InternalServerErrorException(
-            'AI không thể tạo câu hỏi. Vui lòng thử lại.',
+          const providerMessage = this.getProviderErrorMessage(error);
+          this.logger.error(`AI generation failed after 2 attempts: ${providerMessage}`);
+          throw new BadGatewayException(
+            `AI provider failed: ${providerMessage}`,
           );
         }
-        this.logger.warn(`AI attempt ${attempt + 1} failed, retrying: ${error.message}`);
+        this.logger.warn(`AI attempt ${attempt + 1} failed, retrying: ${this.getProviderErrorMessage(error)}`);
       }
     }
 
