@@ -58,6 +58,12 @@ export default function ExamResultsPage() {
     queryFn: () => api.get<any[]>(`/exams/${id}/results`),
   })
 
+  const { data: selectedReport } = useQuery({
+    queryKey: ['anticheat-report', selectedAttemptId],
+    queryFn: () => api.get<any>(`/attempts/${selectedAttemptId}/anticheat-report`),
+    enabled: Boolean(selectedAttemptId),
+  })
+
   const sortedQuestionStats = useMemo(() => {
     const rows = [...(stats?.questionStats ?? [])]
     rows.sort((a: any, b: any) => {
@@ -107,13 +113,6 @@ export default function ExamResultsPage() {
 
   const antiCheat = stats?.antiCheatSummary
   const flaggedCount = antiCheat?.flaggedAttempts ?? 0
-
-  // Selected attempt anti-cheat detail (for modal)
-  const { data: selectedReport } = useQuery({
-    queryKey: ['anticheat-report', selectedAttemptId],
-    queryFn: () => api.get<any>(`/attempts/${selectedAttemptId}/anticheat-report`),
-    enabled: Boolean(selectedAttemptId),
-  })
 
   return (
     <div className="space-y-6">

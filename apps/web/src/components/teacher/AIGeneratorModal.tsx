@@ -187,6 +187,7 @@ export function AIGeneratorModal({
         })
       }
       queryClient.invalidateQueries({ queryKey: ['questions'] })
+      queryClient.invalidateQueries({ queryKey: ['question-tags'] })
       if (examId) {
         queryClient.invalidateQueries({ queryKey: ['exam', examId] })
       }

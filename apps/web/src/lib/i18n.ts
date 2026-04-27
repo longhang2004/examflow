@@ -28,6 +28,8 @@ const dictionaries = {
       myLearning: 'My learning',
       review: 'Review',
       history: 'History',
+      account: 'Account',
+      accountDescription: 'Manage the current signed-in session.',
     },
     settings: {
       description: 'Control how ExamFlow looks and behaves on this device.',
@@ -66,6 +68,8 @@ const dictionaries = {
       myLearning: 'Học tập',
       review: 'Ôn tập',
       history: 'Lịch sử',
+      account: 'Tài khoản',
+      accountDescription: 'Quản lý phiên đăng nhập hiện tại.',
     },
     settings: {
       description: 'Điều chỉnh cách ExamFlow hiển thị và hoạt động trên thiết bị này.',

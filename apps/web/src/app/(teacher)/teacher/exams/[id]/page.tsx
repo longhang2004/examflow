@@ -29,6 +29,7 @@ import { Alert } from '@/components/ui/Alert'
 import { Modal } from '@/components/ui/Modal'
 import { AIGeneratorModal } from '@/components/teacher/AIGeneratorModal'
 import { RichText } from '@/components/ui/RichText'
+import { TagSelector, type TagOption } from '@/components/ui/TagSelector'
 
 interface ExamQuestionItem {
   id: string
@@ -89,6 +90,7 @@ export default function ExamDetailPage() {
   const [showAIModal, setShowAIModal] = useState(false)
   const [selectedQuestions, setSelectedQuestions] = useState<Record<string, number>>({})
   const [qSearch, setQSearch] = useState('')
+  const [qTags, setQTags] = useState<string[]>([])
   const [saveError, setSaveError] = useState('')
 
   const sensors = useSensors(
@@ -102,8 +104,18 @@ export default function ExamDetailPage() {
   })
 
   const { data: questionBank } = useQuery({
-    queryKey: ['questions', { search: qSearch }],
-    queryFn: () => api.get<any>('/questions', { search: qSearch || undefined, limit: 50 }),
+    queryKey: ['questions', { search: qSearch, tags: qTags }],
+    queryFn: () => api.get<any>('/questions', {
+      search: qSearch || undefined,
+      tags: qTags.length ? qTags.join(',') : undefined,
+      limit: 50,
+    }),
+    enabled: showQuestionModal,
+  })
+
+  const { data: availableTags = [] } = useQuery({
+    queryKey: ['question-tags'],
+    queryFn: () => api.get<TagOption[]>('/questions/meta/tags'),
     enabled: showQuestionModal,
   })
 
@@ -272,7 +284,16 @@ export default function ExamDetailPage() {
       <Modal isOpen={showQuestionModal} onClose={() => setShowQuestionModal(false)} title="Add Questions from Bank" className="max-w-2xl">
         <div className="space-y-3">
           {saveError && <Alert type="error" message={saveError} />}
-          <Input placeholder="Search questions..." value={qSearch} onChange={(e) => setQSearch(e.target.value)} />
+          <div className="space-y-3 rounded-comfortable border border-border-cream bg-sand/30 p-3">
+            <Input placeholder="Search questions..." value={qSearch} onChange={(e) => setQSearch(e.target.value)} />
+            <TagSelector
+              label="Filter by tags"
+              selected={qTags}
+              available={availableTags}
+              onChange={setQTags}
+              allowCreate={false}
+            />
+          </div>
           <div className="max-h-80 overflow-y-auto space-y-2">
             {questionBank?.data?.map((q: any) => {
               const selected = q.id in selectedQuestions
@@ -283,11 +304,22 @@ export default function ExamDetailPage() {
                     return { ...prev, [q.id]: 1 }
                   })}>
                   <input type="checkbox" checked={selected} readOnly className="shrink-0" />
-                  <RichText
-                    text={q.content}
-                    imageUrl={q.config?.imageUrl}
-                    className="flex-1 text-sm text-charcoal line-clamp-2"
-                  />
+                  <div className="min-w-0 flex-1">
+                    <RichText
+                      text={q.content}
+                      imageUrl={q.config?.imageUrl}
+                      className="text-sm text-charcoal line-clamp-2"
+                    />
+                    {q.tags?.length ? (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {q.tags.map((tag: string) => (
+                          <span key={tag} className="rounded-pill border border-border-cream bg-sand px-2 py-0.5 text-xs text-olive">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                   {selected && (
                     <input
                       type="number"

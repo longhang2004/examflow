@@ -17,6 +17,7 @@ import { RichTextEditor } from '@/components/ui/RichTextEditor'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { LoadingState } from '@/components/ui/LoadingState'
+import { TagSelector, type TagOption } from '@/components/ui/TagSelector'
 
 const TYPE_LABELS: Record<QuestionType, string> = {
   MULTIPLE_CHOICE: 'Multiple Choice',
@@ -122,10 +123,16 @@ export default function EditQuestionPage() {
   const [fillCaseSensitive, setFillCaseSensitive] = useState(false)
   const [essayRubric, setEssayRubric] = useState([''])
   const [essayMaxWords, setEssayMaxWords] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
 
   const { data: question, isLoading } = useQuery({
     queryKey: ['question', questionId],
     queryFn: () => api.get<Question>(`/questions/${questionId}`),
+  })
+
+  const { data: availableTags = [] } = useQuery({
+    queryKey: ['question-tags'],
+    queryFn: () => api.get<TagOption[]>('/questions/meta/tags'),
   })
 
   const { register, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm<FormData>({
@@ -157,11 +164,12 @@ export default function EditQuestionPage() {
     if (!question) return
     reset({
       content: question.content,
-      tags: question.tags.join(', '),
+      tags: '',
       difficulty: question.difficulty,
       isPublic: question.isPublic,
       explanation: question.config.explanation ?? '',
     })
+    setSelectedTags(question.tags ?? [])
     populateConfig(question.type, question.config)
   }, [question, reset, populateConfig])
 
@@ -192,7 +200,7 @@ export default function EditQuestionPage() {
     mutation.mutate({
       content: data.content,
       config: buildConfig(data.explanation),
-      tags: data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+      tags: selectedTags,
       difficulty: data.difficulty,
       isPublic: data.isPublic,
     })
@@ -319,10 +327,12 @@ export default function EditQuestionPage() {
       </Card>
 
       <Card className="space-y-5">
-        <Input
-          label="Tags (comma-separated)"
-          placeholder="math, algebra, calculus"
-          {...register('tags')}
+        <TagSelector
+          label="Tags"
+          selected={selectedTags}
+          available={availableTags}
+          onChange={setSelectedTags}
+          placeholder="Add or choose tags..."
         />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end">

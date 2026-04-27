@@ -1,15 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/auth.store'
-import { LogOut, User } from 'lucide-react'
+import { User } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 export function StudentHeader() {
   const pathname = usePathname()
-  const router = useRouter()
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
   const { t } = useI18n()
   const links = [
     { href: '/dashboard', label: t('common', 'home') },
@@ -18,11 +17,6 @@ export function StudentHeader() {
     { href: '/history', label: t('common', 'history') },
     { href: '/settings', label: t('common', 'settings') },
   ]
-
-  const handleLogout = async () => {
-    await logout()
-    router.push('/login')
-  }
 
   return (
     <header className="bg-ivory border-b border-border-cream px-4 py-3 md:px-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -56,12 +50,6 @@ export function StudentHeader() {
           </div>
           <span className="text-sm font-medium text-charcoal">{user?.displayName}</span>
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 text-sm text-stone hover:text-error transition-colors duration-150"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
       </div>
     </header>
   )

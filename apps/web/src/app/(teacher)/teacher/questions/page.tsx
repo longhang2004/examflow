@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { DifficultyBadge } from '@/components/ui/DifficultyBadge'
+import { TagSelector, type TagOption } from '@/components/ui/TagSelector'
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -29,20 +30,27 @@ export default function QuestionsPage() {
   const [search, setSearch] = useState('')
   const [type, setType] = useState('')
   const [difficulty, setDifficulty] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [page, setPage] = useState(1)
   const [aiModalOpen, setAiModalOpen] = useState(false)
 
   const debouncedSearch = useDebounce(search, 300)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['questions', { search: debouncedSearch, type, difficulty, page }],
+    queryKey: ['questions', { search: debouncedSearch, type, difficulty, selectedTags, page }],
     queryFn: () => {
       const params: Record<string, any> = { page, limit: 20 }
       if (debouncedSearch) params.search = debouncedSearch
       if (type) params.type = type
       if (difficulty) params.difficulty = difficulty
+      if (selectedTags.length) params.tags = selectedTags.join(',')
       return api.get<any>('/questions', params)
     },
+  })
+
+  const { data: availableTags = [] } = useQuery({
+    queryKey: ['question-tags'],
+    queryFn: () => api.get<TagOption[]>('/questions/meta/tags'),
   })
 
   const deleteMutation = useMutation({
@@ -71,41 +79,51 @@ export default function QuestionsPage() {
         }
       />
 
-      <div className="flex flex-col gap-3 rounded-comfortable border border-border-cream bg-ivory p-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-stone" />
-          <input
-            type="text"
-            placeholder="Search questions..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            className="pl-8 pr-3 py-2 border border-border-warm rounded-comfortable text-sm w-full focus:outline-none focus:ring-2 focus:ring-terracotta"
-          />
+      <div className="space-y-3 rounded-comfortable border border-border-cream bg-ivory p-3">
+        <div className="flex flex-col gap-3 lg:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-stone" />
+            <input
+              type="text"
+              placeholder="Search questions..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+              className="pl-8 pr-3 py-2 border border-border-warm rounded-comfortable text-sm w-full bg-ivory focus:outline-none focus:ring-2 focus:ring-terracotta"
+            />
+          </div>
+
+          <select
+            value={type}
+            onChange={(e) => { setType(e.target.value); setPage(1) }}
+            className="border border-border-warm bg-ivory rounded-comfortable px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta"
+          >
+            <option value="">All Types</option>
+            <option value="MULTIPLE_CHOICE">Single choice</option>
+            <option value="MULTIPLE_SELECT">Multiple select</option>
+            <option value="TRUE_FALSE">True / False</option>
+            <option value="FILL_BLANK">Fill Blank</option>
+            <option value="ESSAY">Essay</option>
+          </select>
+
+          <select
+            value={difficulty}
+            onChange={(e) => { setDifficulty(e.target.value); setPage(1) }}
+            className="border border-border-warm bg-ivory rounded-comfortable px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta"
+          >
+            <option value="">All Difficulty</option>
+            <option value="1">Easy</option>
+            <option value="2">Medium</option>
+            <option value="3">Hard</option>
+          </select>
         </div>
 
-        <select
-          value={type}
-          onChange={(e) => { setType(e.target.value); setPage(1) }}
-          className="border border-border-warm rounded-comfortable px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta"
-        >
-          <option value="">All Types</option>
-          <option value="MULTIPLE_CHOICE">Single choice</option>
-          <option value="MULTIPLE_SELECT">Multiple select</option>
-          <option value="TRUE_FALSE">True / False</option>
-          <option value="FILL_BLANK">Fill Blank</option>
-          <option value="ESSAY">Essay</option>
-        </select>
-
-        <select
-          value={difficulty}
-          onChange={(e) => { setDifficulty(e.target.value); setPage(1) }}
-          className="border border-border-warm rounded-comfortable px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta"
-        >
-          <option value="">All Difficulty</option>
-          <option value="1">Easy</option>
-          <option value="2">Medium</option>
-          <option value="3">Hard</option>
-        </select>
+        <TagSelector
+          label="Filter by tags"
+          selected={selectedTags}
+          available={availableTags}
+          onChange={(tags) => { setSelectedTags(tags); setPage(1) }}
+          allowCreate={false}
+        />
       </div>
 
       {isLoading ? (
@@ -129,7 +147,7 @@ export default function QuestionsPage() {
                 />
                 <div className="flex gap-1 mt-2 flex-wrap">
                   {q.tags.map((tag) => (
-                    <span key={tag} className="text-xs bg-sand text-olive px-1.5 py-0.5 rounded">
+                    <span key={tag} className="text-xs bg-sand text-olive px-2 py-0.5 rounded-pill border border-border-cream">
                       {tag}
                     </span>
                   ))}

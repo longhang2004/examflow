@@ -194,6 +194,34 @@ export class AiService {
     }
   }
 
+  private async getReusableTags(userId: string): Promise<string[]> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const rows = await this.prisma.question.findMany({
+      where: {
+        OR: [
+          { creatorId: userId },
+          { isPublic: true },
+          ...(user?.organizationId ? [{ organizationId: user.organizationId }] : []),
+        ],
+      },
+      select: { tags: true },
+      take: 1000,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const tags = new Map<string, string>();
+    for (const row of rows) {
+      for (const rawTag of row.tags) {
+        const tag = rawTag.trim().replace(/\s+/g, ' ');
+        if (!tag) continue;
+        const key = tag.toLowerCase();
+        if (!tags.has(key)) tags.set(key, tag);
+      }
+    }
+
+    return [...tags.values()].slice(0, 80);
+  }
+
   async getUsage(userId: string): Promise<{ used: number; limit: number; resetsAt: string }> {
     const key = `ai:ratelimit:${userId}`;
     const currentStr = await this.redis.get(key);
@@ -216,6 +244,7 @@ export class AiService {
     await this.checkRateLimit(userId);
 
     const sanitizedText = this.documentParser.sanitizeText(text);
+    const reusableTags = await this.getReusableTags(userId);
 
     const sourceMode = dto.sourceMode ?? 'knowledge';
     const isImportMode = sourceMode === 'test';
@@ -230,6 +259,8 @@ Quy tắc bắt buộc:
 4. Trả về JSON hợp lệ, không có text thừa trước hoặc sau JSON
 5. Có thể dùng Markdown ngắn gọn trong content, options.text, explanation, rubric: **bold**, _italic_, \`code\`, xuống dòng
 6. Nếu tài liệu có công thức, giữ công thức ở dạng text/Markdown dễ đọc; không tạo đường dẫn ảnh giả
+7. Tags: ưu tiên dùng tag có sẵn nếu phù hợp. Chỉ tạo tag mới khi không có tag có sẵn phù hợp.
+8. Tag có sẵn: ${reusableTags.length ? reusableTags.join(', ') : '(chưa có)'}
 
 Format JSON output:
 {
@@ -259,6 +290,8 @@ Quy tắc bắt buộc:
 4. Đảm bảo đáp án chính xác và có giải thích rõ ràng
 5. Có thể dùng Markdown ngắn gọn trong content, options.text, explanation, rubric: **bold**, _italic_, \`code\`, xuống dòng
 6. Nếu tài liệu có công thức, giữ công thức ở dạng text/Markdown dễ đọc; không tạo đường dẫn ảnh giả
+7. Tags: ưu tiên dùng tag có sẵn nếu phù hợp. Chỉ tạo tag mới khi không có tag có sẵn phù hợp.
+8. Tag có sẵn: ${reusableTags.length ? reusableTags.join(', ') : '(chưa có)'}
 
 Format JSON output:
 {

@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PreferencesPanel } from '@/components/settings/PreferencesPanel'
+import { AccountPanel } from '@/components/settings/AccountPanel'
 import { useI18n } from '@/lib/i18n'
 
 interface ParentRequest {
@@ -38,6 +39,7 @@ export default function StudentSettingsPage() {
       <PageHeader title={t('common', 'settings')} description={t('settings', 'description')} />
 
       <PreferencesPanel />
+      <AccountPanel />
 
       <Card>
         <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack mb-4">

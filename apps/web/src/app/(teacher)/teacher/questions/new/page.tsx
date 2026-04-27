@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   ArrowLeft,
   CircleDot,
@@ -26,6 +26,7 @@ import { ImageUploadButton } from '@/components/ui/ImageUploadButton'
 import { RichTextEditor } from '@/components/ui/RichTextEditor'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
+import { TagSelector, type TagOption } from '@/components/ui/TagSelector'
 
 const TYPES: { value: QuestionType; label: string; description: string; icon: LucideIcon }[] = [
   { value: 'MULTIPLE_CHOICE', label: 'Multiple Choice', description: 'One correct answer', icon: CircleDot },
@@ -61,6 +62,7 @@ export default function NewQuestionPage() {
   const [fillCaseSensitive, setFillCaseSensitive] = useState(false)
   const [essayRubric, setEssayRubric] = useState([''])
   const [essayMaxWords, setEssayMaxWords] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -74,6 +76,11 @@ export default function NewQuestionPage() {
     mutationFn: (data: any) => api.post('/questions', data),
     onSuccess: () => router.push('/teacher/questions'),
     onError: (e: any) => setError(e?.response?.data?.error?.message ?? 'Failed to create'),
+  })
+
+  const { data: availableTags = [] } = useQuery({
+    queryKey: ['question-tags'],
+    queryFn: () => api.get<TagOption[]>('/questions/meta/tags'),
   })
 
   const buildConfig = (explanation?: string) => {
@@ -102,7 +109,7 @@ export default function NewQuestionPage() {
       type: selectedType,
       content: data.content,
       config: buildConfig(data.explanation),
-      tags: data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+      tags: selectedTags,
       difficulty: data.difficulty,
       isPublic: data.isPublic,
     })
@@ -288,10 +295,12 @@ export default function NewQuestionPage() {
       </Card>
 
       <Card className="space-y-5">
-        <Input
-          label="Tags (comma-separated)"
-          placeholder="math, algebra, calculus"
-          {...register('tags')}
+        <TagSelector
+          label="Tags"
+          selected={selectedTags}
+          available={availableTags}
+          onChange={setSelectedTags}
+          placeholder="Add or choose tags..."
         />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end">

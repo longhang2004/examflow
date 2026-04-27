@@ -13,6 +13,18 @@ import { Role } from '@prisma/client';
 export class QuestionsService {
   constructor(private prisma: PrismaService) {}
 
+  private normalizeTags(tags?: string[]) {
+    if (!tags?.length) return [];
+    const seen = new Map<string, string>();
+    for (const rawTag of tags) {
+      const tag = rawTag.trim().replace(/\s+/g, ' ');
+      if (!tag) continue;
+      const key = tag.toLowerCase();
+      if (!seen.has(key)) seen.set(key, tag);
+    }
+    return [...seen.values()];
+  }
+
   async create(userId: string, dto: CreateQuestionDto) {
     return this.prisma.question.create({
       data: {
@@ -20,7 +32,7 @@ export class QuestionsService {
         type: dto.type,
         content: dto.content,
         config: dto.config,
-        tags: dto.tags ?? [],
+        tags: this.normalizeTags(dto.tags),
         difficulty: dto.difficulty ?? 1,
         isPublic: dto.isPublic ?? false,
         organizationId: dto.organizationId,
@@ -34,7 +46,7 @@ export class QuestionsService {
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
-    const tagList = tags ? tags.split(',').map((t) => t.trim()) : undefined;
+    const tagList = tags ? this.normalizeTags(tags.split(',')) : undefined;
 
     const where: any = {
       OR: [
@@ -65,6 +77,39 @@ export class QuestionsService {
       data,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  async findTags(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    const where: any = {
+      OR: [
+        { creatorId: userId },
+        { isPublic: true },
+        ...(user?.organizationId ? [{ organizationId: user.organizationId }] : []),
+      ],
+    };
+
+    const questions = await this.prisma.question.findMany({
+      where,
+      select: { tags: true },
+      take: 1000,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const counts = new Map<string, { label: string; count: number }>();
+    for (const question of questions) {
+      for (const tag of this.normalizeTags(question.tags)) {
+        const key = tag.toLowerCase();
+        const existing = counts.get(key);
+        counts.set(key, {
+          label: existing?.label ?? tag,
+          count: (existing?.count ?? 0) + 1,
+        });
+      }
+    }
+
+    return [...counts.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
   }
 
   async findOne(id: string, userId: string) {
@@ -105,7 +150,10 @@ export class QuestionsService {
 
     return this.prisma.question.update({
       where: { id },
-      data: dto,
+      data: {
+        ...dto,
+        tags: dto.tags ? this.normalizeTags(dto.tags) : undefined,
+      },
     });
   }
 

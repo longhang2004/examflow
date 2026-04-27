@@ -42,6 +42,13 @@ export class QuestionsController {
     return this.questionsService.findAll(user.id, query);
   }
 
+  @ApiOperation({ summary: 'List available question tags' })
+  @ApiResponse({ status: 200, description: 'Tag list' })
+  @Get('meta/tags')
+  findTags(@CurrentUser() user: any) {
+    return this.questionsService.findTags(user.id);
+  }
+
   @ApiOperation({ summary: 'Get a question by ID' })
   @ApiResponse({ status: 200, description: 'Question details' })
   @ApiResponse({ status: 404, description: 'Question not found' })
