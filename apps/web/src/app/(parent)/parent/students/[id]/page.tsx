@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, CalendarDays, Flame, Target } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { Card } from '@/components/ui/Card'
+import { HelpHint } from '@/components/guide/HelpHint'
 
 interface StudentDetail {
   student: { id: string; displayName: string; email: string; avatarUrl?: string | null }
@@ -49,9 +50,12 @@ export default function ParentStudentDetailPage() {
       </Link>
 
       <div>
-        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">
-          {data.student.displayName}
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">
+            {data.student.displayName}
+          </h1>
+          <HelpHint guideKey="parent-student" />
+        </div>
         <p className="text-olive mt-1 text-sm">{data.student.email}</p>
       </div>
 

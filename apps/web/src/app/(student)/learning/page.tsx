@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { TrendingUp, BookOpen, Target, ArrowRight } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { Card } from '@/components/ui/Card'
+import { HelpHint } from '@/components/guide/HelpHint'
 
 interface MyStats {
   totalAttempts: number
@@ -43,7 +44,10 @@ export default function StudentLearningPage() {
   return (
     <div className="space-y-8 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">My learning</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">My learning</h1>
+          <HelpHint guideKey="learning" />
+        </div>
         <p className="text-olive mt-1 text-sm">
           Overview of your attempts, scores, and topics to review.
         </p>
@@ -86,7 +90,10 @@ export default function StudentLearningPage() {
       </div>
 
       <Card>
-        <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack mb-3">Topics to review</h2>
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack">Topics to review</h2>
+          <HelpHint guideKey="learning" />
+        </div>
         {stats.weakTopics.length === 0 ? (
           <p className="text-sm text-stone">
             Tag your questions in exams to see weak topics here (needs at least 2 answers per tag).

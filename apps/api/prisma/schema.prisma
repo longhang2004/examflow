@@ -102,6 +102,12 @@ model Question {
 
   examQuestions ExamQuestion[]
   reviewCards   ReviewCard[]
+
+  @@index([creatorId])
+  @@index([organizationId])
+  @@index([type])
+  @@index([difficulty])
+  @@index([isPublic])
 }
 
 model Exam {
@@ -120,6 +126,11 @@ model Exam {
 
   questions ExamQuestion[]
   attempts  Attempt[]
+
+  @@index([creatorId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([accessCode])
 }
 
 model ExamQuestion {
@@ -159,6 +170,9 @@ model Attempt {
   flagReason       String?
 
   @@index([examId, userId])
+  @@index([userId])
+  @@index([status])
+  @@index([submittedAt])
 }
 
 model ParentStudent {

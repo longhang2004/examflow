@@ -31,7 +31,12 @@ export function TagSelector({
 }: TagSelectorProps) {
   const [draft, setDraft] = useState('')
   const selectedKeys = useMemo(() => new Set(selected.map((tag) => tag.toLowerCase())), [selected])
-  const filteredOptions = available.filter((tag) => !selectedKeys.has(tag.label.toLowerCase()))
+  const normalizedDraft = normalizeTag(draft).toLowerCase()
+  const filteredOptions = available.filter((tag) => {
+    const label = tag.label.toLowerCase()
+    return !selectedKeys.has(label) && (!normalizedDraft || label.includes(normalizedDraft))
+  })
+  const searchPlaceholder = allowCreate ? placeholder : 'Search tags...'
 
   const addTag = (rawTag: string) => {
     const tag = normalizeTag(rawTag)
@@ -42,6 +47,19 @@ export function TagSelector({
 
   const removeTag = (tag: string) => {
     onChange(selected.filter((item) => item.toLowerCase() !== tag.toLowerCase()))
+  }
+
+  const handleEnter = () => {
+    if (allowCreate) {
+      addTag(draft)
+      return
+    }
+
+    const exactMatch = filteredOptions.find(
+      (tag) => tag.label.toLowerCase() === normalizedDraft,
+    )
+    const fallback = filteredOptions[0]
+    if (exactMatch || fallback) addTag((exactMatch ?? fallback).label)
   }
 
   return (
@@ -60,38 +78,56 @@ export function TagSelector({
             <X className="h-3 w-3" />
           </button>
         ))}
-        {allowCreate && (
-          <input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ',') {
-                event.preventDefault()
-                addTag(draft)
-              }
-            }}
-            onBlur={() => addTag(draft)}
-            placeholder={selected.length ? '' : placeholder}
-            className="min-w-32 flex-1 bg-transparent px-1 py-1 text-sm text-nearblack placeholder:text-stone focus:outline-none"
-          />
-        )}
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || (allowCreate && event.key === ',')) {
+              event.preventDefault()
+              handleEnter()
+            }
+          }}
+          placeholder={searchPlaceholder}
+          className="min-w-32 flex-1 bg-transparent px-1 py-1 text-sm text-nearblack placeholder:text-stone focus:outline-none"
+        />
       </div>
 
-      {filteredOptions.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {filteredOptions.slice(0, 24).map((tag) => (
-            <button
-              key={tag.label}
-              type="button"
-              onClick={() => addTag(tag.label)}
-              className="inline-flex items-center gap-1 rounded-pill border border-border-cream bg-sand px-2.5 py-1 text-xs font-medium text-olive transition hover:border-terracotta hover:text-terracotta"
-            >
-              <Plus className="h-3 w-3" />
-              {tag.label}
-              {tag.count ? <span className="text-stone">{tag.count}</span> : null}
-            </button>
-          ))}
+      {(filteredOptions.length > 0 || normalizedDraft) && (
+        <div className="max-h-40 overflow-y-auto rounded-comfortable border border-border-cream bg-ivory p-2">
+          {filteredOptions.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {filteredOptions.map((tag) => (
+                <button
+                  key={tag.label}
+                  type="button"
+                  onClick={() => addTag(tag.label)}
+                  className="inline-flex items-center gap-1 rounded-pill border border-border-cream bg-sand px-2.5 py-1 text-xs font-medium text-olive transition hover:border-terracotta hover:text-terracotta"
+                >
+                  <Plus className="h-3 w-3" />
+                  {tag.label}
+                  {tag.count ? <span className="text-stone">{tag.count}</span> : null}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3 px-1 py-1 text-xs text-stone">
+              <span>No matching tags</span>
+              {allowCreate && draft.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => addTag(draft)}
+                  className="font-medium text-terracotta hover:underline"
+                >
+                  Create "{normalizeTag(draft)}"
+                </button>
+              ) : null}
+            </div>
+          )}
         </div>
+      )}
+
+      {!normalizedDraft && filteredOptions.length === 0 && selected.length > 0 && (
+        <p className="text-xs text-stone">All available tags are selected.</p>
       )}
     </div>
   )

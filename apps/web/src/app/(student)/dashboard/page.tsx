@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge, statusBadge } from '@/components/ui/Badge'
 import { ReviewWidget } from '@/components/student/ReviewWidget'
+import { HelpHint } from '@/components/guide/HelpHint'
 
 export default function StudentDashboardPage() {
   const { user } = useAuthStore()
@@ -29,7 +30,10 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">Welcome, {user?.displayName}!</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">Welcome, {user?.displayName}!</h1>
+          <HelpHint guideKey="student-dashboard" />
+        </div>
         <p className="text-olive mt-1">Ready to take an exam?</p>
         <Link
           href="/learning"
@@ -42,7 +46,10 @@ export default function StudentDashboardPage() {
       <ReviewWidget />
 
       <Card variant="elevated" padding="lg">
-        <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack mb-4">Enter Exam Code</h2>
+        <div className="mb-4 flex items-center gap-2">
+          <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack">Enter Exam Code</h2>
+          <HelpHint guideKey="student-dashboard" />
+        </div>
         <div className="flex gap-3">
           <input
             type="text"
@@ -62,7 +69,10 @@ export default function StudentDashboardPage() {
       {attempts && attempts.length > 0 && (
         <Card variant="bordered">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack">Recent Attempts</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack">Recent Attempts</h2>
+              <HelpHint guideKey="history" />
+            </div>
             <Link href="/history" className="text-sm text-terracotta hover:underline flex items-center gap-1">
               View all <ArrowRight className="w-3 h-3" />
             </Link>

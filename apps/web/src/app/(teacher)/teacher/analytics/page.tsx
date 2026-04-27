@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import Link from 'next/link'
 import { BarChart2, TrendingUp, Users, FileText } from 'lucide-react'
+import { HelpHint } from '@/components/guide/HelpHint'
 
 interface ExamSummary {
   id: string
@@ -35,7 +36,10 @@ export default function TeacherAnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">Analytics</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">Analytics</h1>
+          <HelpHint guideKey="teacher-analytics" />
+        </div>
         <p className="text-sm text-stone mt-1">View detailed statistics for your published exams</p>
       </div>
 

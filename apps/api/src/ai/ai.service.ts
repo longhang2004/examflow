@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import { Plan } from '@prisma/client';
+import { Plan, QuestionType } from '@prisma/client';
 import { RedisService } from '../redis/redis.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DocumentParserService } from './document-parser.service';
@@ -98,6 +98,94 @@ export class AiService {
       if (!match) throw new Error('AI response is not valid JSON');
       return JSON.parse(match[0]);
     }
+  }
+
+  private isNonEmptyString(value: unknown): value is string {
+    return typeof value === 'string' && value.trim().length > 0;
+  }
+
+  private hasValidOptions(config: any) {
+    if (!Array.isArray(config?.options) || config.options.length < 2) {
+      return false;
+    }
+
+    const optionIds = new Set<string>();
+    for (const option of config.options) {
+      if (!this.isNonEmptyString(option?.id) || !this.isNonEmptyString(option?.text)) {
+        return false;
+      }
+      optionIds.add(option.id);
+    }
+
+    return optionIds.size === config.options.length;
+  }
+
+  private isValidGeneratedQuestion(question: any) {
+    if (
+      !Object.values(QuestionType).includes(question?.type) ||
+      !this.isNonEmptyString(question?.content) ||
+      !question?.config ||
+      typeof question.config !== 'object'
+    ) {
+      return false;
+    }
+
+    const config = question.config;
+
+    switch (question.type) {
+      case QuestionType.MULTIPLE_CHOICE: {
+        if (!this.hasValidOptions(config) || !this.isNonEmptyString(config.correctAnswer)) {
+          return false;
+        }
+        return config.options.some((option: any) => option.id === config.correctAnswer);
+      }
+
+      case QuestionType.MULTIPLE_SELECT: {
+        if (!this.hasValidOptions(config) || !Array.isArray(config.correctAnswers)) {
+          return false;
+        }
+        const optionIds = new Set(config.options.map((option: any) => option.id));
+        return (
+          config.correctAnswers.length > 0 &&
+          config.correctAnswers.every((id: unknown) => this.isNonEmptyString(id) && optionIds.has(id))
+        );
+      }
+
+      case QuestionType.TRUE_FALSE:
+        return typeof config.correctAnswer === 'boolean';
+
+      case QuestionType.FILL_BLANK:
+        return (
+          Array.isArray(config.correctAnswers) &&
+          config.correctAnswers.some((answer: unknown) => this.isNonEmptyString(answer))
+        );
+
+      case QuestionType.ESSAY:
+        return this.isNonEmptyString(config.rubric);
+
+      default:
+        return false;
+    }
+  }
+
+  private normalizeGeneratedQuestion(question: any) {
+    return {
+      type: question.type,
+      content: question.content.trim(),
+      config: question.config,
+      tags: Array.isArray(question.tags)
+        ? question.tags
+            .map((tag: unknown) => String(tag).trim())
+            .filter(Boolean)
+            .slice(0, 8)
+        : [],
+      difficulty: [1, 2, 3].includes(Number(question.difficulty))
+        ? Number(question.difficulty)
+        : 2,
+      explanation: this.isNonEmptyString(question.explanation)
+        ? question.explanation.trim()
+        : undefined,
+    };
   }
 
   private getProviderErrorMessage(error: any): string {
@@ -345,10 +433,13 @@ ${isImportMode
           throw new Error('Response missing questions array');
         }
 
-        // Validate each question has required fields
-        response.questions = response.questions.filter((q: any) => {
-          return q.type && q.content && q.config;
-        });
+        response.questions = response.questions
+          .filter((q: any) => this.isValidGeneratedQuestion(q))
+          .map((q: any) => this.normalizeGeneratedQuestion(q));
+
+        if (response.questions.length === 0) {
+          throw new Error('AI response did not contain any valid questions');
+        }
 
         break; // Success
       } catch (error: any) {

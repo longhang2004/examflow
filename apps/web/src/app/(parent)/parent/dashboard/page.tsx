@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Alert } from '@/components/ui/Alert'
+import { HelpHint } from '@/components/guide/HelpHint'
 
 interface StudentSummary {
   student: {
@@ -48,9 +49,12 @@ export default function ParentDashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">
-          Parent dashboard
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">
+            Parent dashboard
+          </h1>
+          <HelpHint guideKey="parent-dashboard" />
+        </div>
         <p className="text-olive mt-1 text-sm">
           Track accepted student links, weekly activity, and review workload.
         </p>
@@ -63,9 +67,12 @@ export default function ParentDashboardPage() {
           </div>
           <div className="flex-1 space-y-4">
             <div>
-              <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack">
-                Link a student account
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack">
+                  Link a student account
+                </h2>
+                <HelpHint guideKey="parent-dashboard" />
+              </div>
               <p className="text-sm text-stone mt-1">
                 Send a request to the student email. They must approve it from their settings page.
               </p>
@@ -96,9 +103,12 @@ export default function ParentDashboardPage() {
 
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack">
-            Linked students
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack">
+              Linked students
+            </h2>
+            <HelpHint guideKey="parent-dashboard" />
+          </div>
           {isLoading && <span className="text-sm text-stone">Loading...</span>}
         </div>
 

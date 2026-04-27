@@ -27,16 +27,37 @@ import { Input } from '@/components/ui/Input'
 import { Badge, statusBadge } from '@/components/ui/Badge'
 import { Alert } from '@/components/ui/Alert'
 import { Modal } from '@/components/ui/Modal'
+import { DifficultyBadge } from '@/components/ui/DifficultyBadge'
 import { AIGeneratorModal } from '@/components/teacher/AIGeneratorModal'
 import { RichText } from '@/components/ui/RichText'
 import { TagSelector, type TagOption } from '@/components/ui/TagSelector'
+
+const QUESTION_TYPE_OPTIONS = [
+  { value: '', label: 'All types' },
+  { value: 'MULTIPLE_CHOICE', label: 'Multiple choice' },
+  { value: 'MULTIPLE_SELECT', label: 'Multi-select' },
+  { value: 'TRUE_FALSE', label: 'True / false' },
+  { value: 'FILL_BLANK', label: 'Fill blank' },
+  { value: 'ESSAY', label: 'Essay' },
+]
+
+const DIFFICULTY_OPTIONS = [
+  { value: '', label: 'All difficulty' },
+  { value: '1', label: 'Easy' },
+  { value: '2', label: 'Medium' },
+  { value: '3', label: 'Hard' },
+]
+
+function questionTypeLabel(type?: string) {
+  return QUESTION_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? type?.replaceAll('_', ' ') ?? 'Question'
+}
 
 interface ExamQuestionItem {
   id: string
   questionId: string
   order: number
   point: number
-  question?: { content: string; type: string; config?: any }
+  question?: { content: string; type: string; difficulty?: number; config?: any }
 }
 
 function SortableQuestion({
@@ -71,6 +92,8 @@ function SortableQuestion({
         imageUrl={eq.question?.config?.imageUrl}
         className="flex-1 text-sm text-charcoal line-clamp-2"
       />
+      {eq.question?.type && <Badge variant="default">{questionTypeLabel(eq.question.type)}</Badge>}
+      <DifficultyBadge value={eq.question?.difficulty} />
       <span className="text-xs text-stone">{eq.point}pt</span>
       {isDraft && (
         <button onClick={() => onRemove(eq.questionId)} className="text-silver hover:text-error">
@@ -91,6 +114,8 @@ export default function ExamDetailPage() {
   const [selectedQuestions, setSelectedQuestions] = useState<Record<string, number>>({})
   const [qSearch, setQSearch] = useState('')
   const [qTags, setQTags] = useState<string[]>([])
+  const [qType, setQType] = useState('')
+  const [qDifficulty, setQDifficulty] = useState('')
   const [saveError, setSaveError] = useState('')
 
   const sensors = useSensors(
@@ -104,10 +129,12 @@ export default function ExamDetailPage() {
   })
 
   const { data: questionBank } = useQuery({
-    queryKey: ['questions', { search: qSearch, tags: qTags }],
+    queryKey: ['questions', { search: qSearch, tags: qTags, type: qType, difficulty: qDifficulty }],
     queryFn: () => api.get<any>('/questions', {
       search: qSearch || undefined,
       tags: qTags.length ? qTags.join(',') : undefined,
+      type: qType || undefined,
+      difficulty: qDifficulty || undefined,
       limit: 50,
     }),
     enabled: showQuestionModal,
@@ -286,6 +313,36 @@ export default function ExamDetailPage() {
           {saveError && <Alert type="error" message={saveError} />}
           <div className="space-y-3 rounded-comfortable border border-border-cream bg-sand/30 p-3">
             <Input placeholder="Search questions..." value={qSearch} onChange={(e) => setQSearch(e.target.value)} />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-sm font-medium text-charcoal">Filter by type</span>
+                <select
+                  value={qType}
+                  onChange={(event) => setQType(event.target.value)}
+                  className="w-full rounded-comfortable border border-border-warm bg-ivory px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-terracotta"
+                >
+                  {QUESTION_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm font-medium text-charcoal">Filter by difficulty</span>
+                <select
+                  value={qDifficulty}
+                  onChange={(event) => setQDifficulty(event.target.value)}
+                  className="w-full rounded-comfortable border border-border-warm bg-ivory px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-terracotta"
+                >
+                  {DIFFICULTY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <TagSelector
               label="Filter by tags"
               selected={qTags}
@@ -300,11 +357,15 @@ export default function ExamDetailPage() {
               return (
                 <div key={q.id} className={`border rounded-comfortable p-3 flex items-center gap-3 cursor-pointer ${selected ? 'border-terracotta bg-terracotta/5' : 'border-border-cream hover:border-ring-warm'}`}
                   onClick={() => setSelectedQuestions(prev => {
-                    if (prev[q.id]) { const { [q.id]: _, ...rest } = prev; return rest }
+                    if (q.id in prev) { const { [q.id]: _, ...rest } = prev; return rest }
                     return { ...prev, [q.id]: 1 }
                   })}>
                   <input type="checkbox" checked={selected} readOnly className="shrink-0" />
                   <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                      <Badge variant="default">{questionTypeLabel(q.type)}</Badge>
+                      <DifficultyBadge value={q.difficulty} />
+                    </div>
                     <RichText
                       text={q.content}
                       imageUrl={q.config?.imageUrl}

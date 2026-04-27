@@ -31,6 +31,9 @@ Demo accounts:
 - **Auto Grading** — Instant scoring for objective questions with partial credit for multi-select
 - **Auto-Save** — Answers saved automatically as students work, with resume support
 - **Anti-Cheat** — Tab-switch detection, fullscreen enforcement, and activity logging
+- **AI Question Generator** — Generate or import questions from PDF, DOCX, or pasted text
+- **Spaced Repetition** — SM-2 review queue that automatically adds missed questions
+- **Parent Dashboard** — Parent/student linking with progress and review workload summaries
 - **Analytics Dashboard** — Score distributions, question-level stats, and weak topic identification
 - **Role-Based Access** — Student, Teacher, Org Admin, and Super Admin with fine-grained permissions
 - **JWT Auth** — Secure access/refresh token flow with Redis-backed session management
@@ -172,7 +175,7 @@ _*Requires TEACHER, ORG_ADMIN, or SUPER_ADMIN role_
 ## Roadmap
 
 - [x] **Phase 1** — Core exam platform (Auth, Questions, Exams, Attempts, Analytics)
-- [ ] **Phase 2** — AI-powered features (auto question generation, smart analytics)
+- [x] **Phase 2** — Anti-cheat, AI question generation, review engine, parent dashboard, tests, and API docs polish
 - [ ] **Phase 3** — Organization management, bulk operations, advanced reporting
 - [ ] **Phase 4** — Mobile app, real-time collaboration, LMS integrations
 

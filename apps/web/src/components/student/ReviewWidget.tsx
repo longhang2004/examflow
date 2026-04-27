@@ -6,6 +6,7 @@ import { ArrowRight, BookOpenCheck, CalendarClock, Flame } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { HelpHint } from '@/components/guide/HelpHint'
 
 interface ReviewStats {
   totalCards: number
@@ -37,9 +38,12 @@ export function ReviewWidget() {
               <BookOpenCheck className="w-5 h-5 text-terracotta" />
             </div>
             <div>
-              <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack">
-                Review today
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack">
+                  Review today
+                </h2>
+                <HelpHint guideKey="review" />
+              </div>
               <p className="text-sm text-stone">
                 {stats.dueToday > 0
                   ? `${stats.dueToday} card${stats.dueToday === 1 ? '' : 's'} due now`

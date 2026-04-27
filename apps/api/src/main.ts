@@ -36,15 +36,33 @@ async function bootstrap() {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('ExamFlow API')
-    .setDescription('Online examination platform API')
+    .setDescription(`
+## ExamFlow Online Examination Platform API
+
+### Authentication
+Use a Bearer JWT access token from \`POST /auth/login\`.
+
+### Rate Limiting
+- General endpoints: 100 requests / 15 minutes
+- Auth endpoints: stricter login/register throttling where configured
+- AI endpoints: plan-based hourly limits
+
+### Error Format
+Errors use the global response envelope: \`{ success: false, error: { code, message } }\`.
+    `)
     .setVersion('1.0')
     .addBearerAuth()
-    .addTag('Auth')
-    .addTag('Questions')
-    .addTag('Exams')
-    .addTag('Attempts')
-    .addTag('Analytics')
-    .addTag('Health')
+    .addTag('Auth', 'Register, login, refresh, and logout')
+    .addTag('Questions', 'Question bank management')
+    .addTag('Exams', 'Exam creation, publishing, and results')
+    .addTag('Attempts', 'Exam taking, autosave, submission, and grading')
+    .addTag('Analytics', 'Learning and exam analytics')
+    .addTag('AI', 'AI question generation and suggestions')
+    .addTag('Review', 'Spaced repetition review')
+    .addTag('Parent', 'Parent/student linking and progress views')
+    .addTag('Anti-cheat', 'Exam monitoring events and reports')
+    .addTag('Uploads', 'Media upload endpoints')
+    .addTag('Health', 'Service health checks')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

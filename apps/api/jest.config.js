@@ -5,7 +5,20 @@ module.exports = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
-  collectCoverageFrom: ['**/*.(t|j)s'],
+  collectCoverageFrom: [
+    'attempts/anticheat.service.ts',
+    'attempts/grading.service.ts',
+    'auth/auth.service.ts',
+    'review/sm2.service.ts',
+  ],
   coverageDirectory: '../coverage',
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 75,
+      lines: 75,
+      statements: 75,
+    },
+  },
   testEnvironment: 'node',
 };

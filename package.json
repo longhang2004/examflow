@@ -7,8 +7,8 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "test": "turbo run test",
-    "test:api": "cd apps/api && jest",
-    "test:web": "cd apps/web && jest"
+    "test:api": "pnpm --filter api test",
+    "test:web": "pnpm --filter web test"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
