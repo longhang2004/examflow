@@ -131,6 +131,11 @@ export class AiService {
   }
 
   private async getUserPlanLimit(userId: string): Promise<number> {
+    const override = this.configService.get<number>('AI_RATE_LIMIT_PER_HOUR');
+    if (typeof override === 'number') {
+      return override;
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { plan: true },
@@ -159,6 +164,10 @@ export class AiService {
       ? new Date(Date.now() + ttl * 1000).toISOString()
       : new Date(Date.now() + 3600 * 1000).toISOString();
 
+    if (limit === 0) {
+      return { used: current, limit, resetsAt };
+    }
+
     if (current >= limit) {
       throw new HttpException(
         `AI rate limit exceeded. Limit: ${limit}/hour. Resets at ${resetsAt}`,
@@ -170,6 +179,9 @@ export class AiService {
   }
 
   private async incrementRateLimit(userId: string): Promise<void> {
+    const limit = await this.getUserPlanLimit(userId);
+    if (limit === 0) return;
+
     const key = `ai:ratelimit:${userId}`;
     const currentStr = await this.redis.get(key);
     const current = currentStr ? parseInt(currentStr, 10) : 0;
