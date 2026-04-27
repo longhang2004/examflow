@@ -7,17 +7,20 @@ import {
   BookOpen,
   FileText,
   BarChart2,
+  Settings,
 } from 'lucide-react'
-
-const links = [
-  { href: '/teacher/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/teacher/questions', label: 'Question Bank', icon: BookOpen },
-  { href: '/teacher/exams', label: 'Exams', icon: FileText },
-  { href: '/teacher/analytics', label: 'Analytics', icon: BarChart2 },
-]
+import { useI18n } from '@/lib/i18n'
 
 export function TeacherSidebar() {
   const pathname = usePathname()
+  const { t } = useI18n()
+  const links = [
+    { href: '/teacher/dashboard', label: t('common', 'dashboard'), icon: LayoutDashboard },
+    { href: '/teacher/questions', label: t('common', 'questionBank'), icon: BookOpen },
+    { href: '/teacher/exams', label: t('common', 'exams'), icon: FileText },
+    { href: '/teacher/analytics', label: t('common', 'analytics'), icon: BarChart2 },
+    { href: '/teacher/settings', label: t('common', 'settings'), icon: Settings },
+  ]
 
   return (
     <aside className="hidden w-64 bg-ivory border-r border-border-cream min-h-screen flex-col md:flex">

@@ -5,6 +5,9 @@ import { Check, X } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { PreferencesPanel } from '@/components/settings/PreferencesPanel'
+import { useI18n } from '@/lib/i18n'
 
 interface ParentRequest {
   parentId: string
@@ -14,6 +17,7 @@ interface ParentRequest {
 
 export default function StudentSettingsPage() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const { data, isLoading } = useQuery({
     queryKey: ['student-parent-requests'],
     queryFn: () => api.get<ParentRequest[]>('/student/parent-requests'),
@@ -31,24 +35,19 @@ export default function StudentSettingsPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">
-          Settings
-        </h1>
-        <p className="text-olive mt-1 text-sm">
-          Manage parent accounts that request access to your progress.
-        </p>
-      </div>
+      <PageHeader title={t('common', 'settings')} description={t('settings', 'description')} />
+
+      <PreferencesPanel />
 
       <Card>
         <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack mb-4">
-          Parent follow requests
+          {t('settings', 'parentRequests')}
         </h2>
 
         {isLoading ? (
-          <p className="text-sm text-stone">Loading requests...</p>
+          <p className="text-sm text-stone">{t('settings', 'loadingRequests')}</p>
         ) : requests.length === 0 ? (
-          <p className="text-sm text-stone">No pending parent requests.</p>
+          <p className="text-sm text-stone">{t('settings', 'noParentRequests')}</p>
         ) : (
           <div className="space-y-3">
             {requests.map((request) => (
@@ -67,7 +66,7 @@ export default function StudentSettingsPage() {
                     loading={respondMutation.isPending}
                   >
                     <Check className="w-4 h-4" />
-                    Accept
+                    {t('settings', 'accept')}
                   </Button>
                   <Button
                     size="sm"
@@ -76,7 +75,7 @@ export default function StudentSettingsPage() {
                     loading={respondMutation.isPending}
                   >
                     <X className="w-4 h-4" />
-                    Decline
+                    {t('settings', 'decline')}
                   </Button>
                 </div>
               </div>

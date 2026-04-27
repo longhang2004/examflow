@@ -4,19 +4,20 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/auth.store'
 import { LogOut, User } from 'lucide-react'
-
-const links = [
-  { href: '/dashboard', label: 'Home' },
-  { href: '/learning', label: 'My learning' },
-  { href: '/review', label: 'Review' },
-  { href: '/history', label: 'History' },
-  { href: '/settings', label: 'Settings' },
-]
+import { useI18n } from '@/lib/i18n'
 
 export function StudentHeader() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuthStore()
+  const { t } = useI18n()
+  const links = [
+    { href: '/dashboard', label: t('common', 'home') },
+    { href: '/learning', label: t('common', 'myLearning') },
+    { href: '/review', label: t('common', 'review') },
+    { href: '/history', label: t('common', 'history') },
+    { href: '/settings', label: t('common', 'settings') },
+  ]
 
   const handleLogout = async () => {
     await logout()
@@ -24,12 +25,12 @@ export function StudentHeader() {
   }
 
   return (
-    <header className="bg-ivory border-b border-border-cream px-6 py-3 flex items-center justify-between">
-      <div className="flex items-center gap-8">
+    <header className="bg-ivory border-b border-border-cream px-4 py-3 md:px-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-8">
         <Link href="/dashboard" className="text-lg font-sans font-semibold tracking-tight text-nearblack">
           ExamFlow
         </Link>
-        <nav className="flex items-center gap-1">
+        <nav className="flex flex-wrap items-center gap-1">
           {links.map(({ href, label }) => {
             const active = pathname === href
             return (
@@ -48,7 +49,7 @@ export function StudentHeader() {
           })}
         </nav>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between gap-4 lg:justify-end">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-sand flex items-center justify-center">
             <User className="w-3.5 h-3.5 text-olive" />

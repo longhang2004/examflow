@@ -4,15 +4,17 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LogOut, UserRound } from 'lucide-react'
 import { useAuthStore } from '@/store/auth.store'
-
-const links = [
-  { href: '/parent/dashboard', label: 'Overview' },
-]
+import { useI18n } from '@/lib/i18n'
 
 export function ParentHeader() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuthStore()
+  const { t } = useI18n()
+  const links = [
+    { href: '/parent/dashboard', label: t('common', 'overview') },
+    { href: '/parent/settings', label: t('common', 'settings') },
+  ]
 
   const handleLogout = async () => {
     await logout()
@@ -20,8 +22,8 @@ export function ParentHeader() {
   }
 
   return (
-    <header className="bg-ivory border-b border-border-cream px-6 py-3 flex items-center justify-between">
-      <div className="flex items-center gap-8">
+    <header className="bg-ivory border-b border-border-cream px-4 py-3 md:px-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-6">
         <Link href="/parent/dashboard" className="text-lg font-sans font-semibold tracking-tight text-nearblack">
           ExamFlow
         </Link>
@@ -44,7 +46,7 @@ export function ParentHeader() {
           })}
         </nav>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between gap-4 sm:justify-end">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-sand flex items-center justify-center">
             <UserRound className="w-3.5 h-3.5 text-olive" />

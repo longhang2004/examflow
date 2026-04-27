@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { QueryProvider } from '@/components/providers/QueryProvider'
+import { AppProviders } from '@/components/providers/AppProviders'
 
 export const metadata: Metadata = {
   title: 'ExamFlow',
@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <QueryProvider>{children}</QueryProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   )
