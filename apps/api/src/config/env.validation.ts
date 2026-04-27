@@ -10,4 +10,11 @@ export const envValidationSchema = Joi.object({
   PORT: Joi.number().default(3001),
   FRONTEND_URL: Joi.string().required(),
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+  AI_PROVIDER: Joi.string().valid('openai', 'gemini').optional(),
+  OPENAI_API_KEY: Joi.string().optional().allow(''),
+  OPENAI_MODEL: Joi.string().optional().allow(''),
+  GEMINI_API_KEY: Joi.string().optional().allow(''),
+  GEMINI_MODEL: Joi.string().optional().allow(''),
+  GEMINI_BASE_URL: Joi.string().optional().allow(''),
+  AI_MODEL: Joi.string().optional().allow(''),
 });

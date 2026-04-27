@@ -3,45 +3,16 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, Maximize, ShieldAlert } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { useExamStore } from '@/store/exam.store'
+import { useFullscreen } from '@/hooks/useFullscreen'
+import { useTabSwitch } from '@/hooks/useTabSwitch'
+import { useExamTimer } from '@/hooks/useExamTimer'
+import { FullscreenOverlay } from '@/components/exam/FullscreenOverlay'
+import { ExamWarningToast } from '@/components/exam/ExamWarningToast'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-
-function Timer({ duration, startedAt, onExpire }: { duration: number; startedAt: string; onExpire: () => void }) {
-  const [remaining, setRemaining] = useState(() => {
-    const elapsed = (Date.now() - new Date(startedAt).getTime()) / 1000
-    return Math.max(0, duration * 60 - elapsed)
-  })
-  const expired = useRef(false)
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRemaining((prev) => {
-        const next = prev - 1
-        if (next <= 0 && !expired.current) {
-          expired.current = true
-          onExpire()
-          clearInterval(interval)
-          return 0
-        }
-        return next
-      })
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [onExpire])
-
-  const mins = Math.floor(remaining / 60)
-  const secs = Math.floor(remaining % 60)
-  const isLow = remaining < 300
-
-  return (
-    <div className={`font-mono text-lg font-bold ${isLow ? 'text-error' : 'text-charcoal'}`}>
-      {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
-    </div>
-  )
-}
 
 function QuestionDisplay({ question, answer, onChange }: { question: any; answer: any; onChange: (v: any) => void }) {
   const config = question.config ?? {}
@@ -133,69 +104,17 @@ function QuestionDisplay({ question, answer, onChange }: { question: any; answer
   return null
 }
 
-function WarningOverlay({
-  type,
-  tabSwitchCount,
-  onEnterFullscreen,
-}: {
-  type: 'tab-switch' | 'fullscreen-exit'
-  tabSwitchCount: number
-  onEnterFullscreen: () => void
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-lg bg-black/60">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 text-center space-y-5">
-        <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
-          {type === 'tab-switch' ? (
-            <ShieldAlert className="w-8 h-8 text-red-600" />
-          ) : (
-            <Maximize className="w-8 h-8 text-red-600" />
-          )}
-        </div>
-
-        <div>
-          <h2 className="text-xl font-bold text-nearblack">
-            {type === 'tab-switch' ? 'Tab Switch Detected!' : 'Fullscreen Required'}
-          </h2>
-          <p className="text-sm text-stone mt-2">
-            {type === 'tab-switch'
-              ? `You left the exam tab. This has been recorded. (${tabSwitchCount} violation${tabSwitchCount > 1 ? 's' : ''})`
-              : 'You exited fullscreen mode. Please return to fullscreen to continue the exam.'}
-          </p>
-        </div>
-
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-800 text-left">
-              {type === 'tab-switch'
-                ? 'Repeated tab switches may result in your exam being flagged or auto-submitted.'
-                : 'The exam must be taken in fullscreen mode to maintain exam integrity.'}
-            </p>
-          </div>
-        </div>
-
-        <Button onClick={onEnterFullscreen} className="w-full">
-          <Maximize className="w-4 h-4" />
-          Enter Fullscreen & Continue
-        </Button>
-      </div>
-    </div>
-  )
-}
-
 export default function AttemptPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [savedStatus, setSavedStatus] = useState<'saved' | 'saving' | 'error'>('saved')
-  const [warningType, setWarningType] = useState<'tab-switch' | 'fullscreen-exit' | null>(null)
   const saveTimer = useRef<NodeJS.Timeout | null>(null)
   const timeSpentRef = useRef<Record<string, number>>({})
   const questionStartTime = useRef(Date.now())
 
-  const { attempt, questions, currentIndex, answers, viewedQuestions, tabSwitchCount, setAttempt, setQuestions, setCurrentIndex, saveAnswer: storeAnswer, markViewed, incrementTabSwitch, reset } = useExamStore()
+  const { attempt, questions, currentIndex, answers, viewedQuestions, setAttempt, setQuestions, setCurrentIndex, saveAnswer: storeAnswer, markViewed, reset } = useExamStore()
 
   const { data, isLoading, error: fetchError } = useQuery({
     queryKey: ['attempt', id],
@@ -230,41 +149,31 @@ export default function AttemptPage() {
     }
   }, [currentIndex, questions, markViewed])
 
-  const enterFullscreen = useCallback(() => {
-    document.documentElement.requestFullscreen?.().then(() => {
-      setWarningType(null)
-    }).catch(() => {
-      setWarningType(null)
-    })
-  }, [])
+  // --- Anti-cheat Hooks ---
+  const handleAutoSubmit = useCallback(() => {
+    reset()
+    router.push(`/attempts/${id}/result?reason=autosubmit`)
+  }, [id, reset, router])
 
-  useEffect(() => {
-    if (!attempt || attempt.status !== 'IN_PROGRESS') return
+  const handleTimerExpire = useCallback(async () => {
+    try {
+      await api.post(`/attempts/${id}/submit`)
+    } catch {}
+    reset()
+    router.push(`/attempts/${id}/result?reason=autosubmit`)
+  }, [id, reset, router])
 
-    const handleVisibility = () => {
-      if (document.hidden) {
-        incrementTabSwitch()
-        setWarningType('tab-switch')
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibility)
+  const { isFullscreen, requestFullscreen, exitCount } = useFullscreen(id)
+  const { switchCount, lastWarning, autoSubmitted } = useTabSwitch(id, handleAutoSubmit)
 
-    document.documentElement.requestFullscreen?.().catch(() => {})
+  const config = (attempt?.exam?.config as any) ?? {}
+  const { remainingSeconds, isExpired, formatted } = useExamTimer(
+    id,
+    !!config.duration,
+    handleTimerExpire,
+  )
 
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        setWarningType('fullscreen-exit')
-      }
-    }
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibility)
-      document.removeEventListener('fullscreenchange', handleFullscreenChange)
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
-    }
-  }, [incrementTabSwitch, attempt?.status, attempt])
-
+  // --- Answer Handling ---
   const handleAnswerChange = useCallback((questionId: string, value: any) => {
     storeAnswer(questionId, value)
     setSavedStatus('saving')
@@ -297,6 +206,7 @@ export default function AttemptPage() {
     }
   }, [id, reset, router])
 
+  // --- Render States ---
   if (fetchError) {
     return (
       <div className="fixed inset-0 z-40 bg-parchment flex items-center justify-center">
@@ -325,36 +235,45 @@ export default function AttemptPage() {
   const currentAnswer = currentQuestion ? answers[currentQuestion.id] : undefined
   const answeredCount = questions.filter((q) => answers[q.id] !== undefined).length
   const unansweredCount = questions.length - answeredCount
-  const config = (attempt.exam?.config as any) ?? {}
+  const isLowTime = remainingSeconds !== null && remainingSeconds < 300
 
   return (
     <div className="fixed inset-0 z-40 bg-parchment flex flex-col overflow-hidden">
-      {warningType && (
-        <WarningOverlay
-          type={warningType}
-          tabSwitchCount={tabSwitchCount}
-          onEnterFullscreen={enterFullscreen}
+      {/* Fullscreen Overlay */}
+      {!isFullscreen && attempt.status === 'IN_PROGRESS' && (
+        <FullscreenOverlay
+          exitCount={exitCount}
+          onRequestFullscreen={requestFullscreen}
         />
       )}
 
+      {/* Warning Toast */}
+      <ExamWarningToast warning={lastWarning} tabSwitchCount={switchCount} />
+
+      {/* Header */}
       <header className="shrink-0 bg-ivory border-b border-border-cream px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <span className="font-bold text-terracotta">ExamFlow</span>
           <span className="text-stone text-sm">{attempt.exam?.title ?? 'Exam'}</span>
         </div>
         <div className="flex items-center gap-4">
-          {tabSwitchCount > 0 && (
+          {switchCount > 0 && (
             <span className="text-xs text-error font-medium px-2 py-0.5 bg-red-50 rounded">
-              {tabSwitchCount} tab violation{tabSwitchCount > 1 ? 's' : ''}
+              {switchCount} tab violation{switchCount > 1 ? 's' : ''}
             </span>
           )}
           <span className={`text-xs px-2 py-0.5 rounded ${savedStatus === 'saved' ? 'text-green-600' : savedStatus === 'saving' ? 'text-amber-600' : 'text-error'}`}>
             {savedStatus === 'saved' ? 'Saved' : savedStatus === 'saving' ? 'Saving...' : 'Save error'}
           </span>
-          {config.duration && <Timer duration={config.duration} startedAt={attempt.startedAt} onExpire={handleSubmit} />}
+          {config.duration && (
+            <div className={`font-mono text-lg font-bold ${isLowTime ? 'text-error animate-pulse' : 'text-charcoal'}`}>
+              {formatted}
+            </div>
+          )}
         </div>
       </header>
 
+      {/* Main Content */}
       <div className="flex flex-1 min-h-0">
         <main className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto p-6">
@@ -383,6 +302,7 @@ export default function AttemptPage() {
           </div>
         </main>
 
+        {/* Sidebar */}
         <aside className="shrink-0 w-64 bg-ivory border-l border-border-cream p-4 flex flex-col gap-4 overflow-y-auto">
           <div>
             <h3 className="text-xs font-semibold text-stone uppercase mb-2">Questions</h3>
@@ -417,6 +337,7 @@ export default function AttemptPage() {
         </aside>
       </div>
 
+      {/* Submit Modal */}
       <Modal isOpen={showSubmitModal} onClose={() => setShowSubmitModal(false)} title="Submit Exam">
         <div className="space-y-4">
           {unansweredCount > 0 && (

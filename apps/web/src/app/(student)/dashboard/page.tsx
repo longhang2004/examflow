@@ -10,6 +10,7 @@ import { api } from '@/lib/api-client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge, statusBadge } from '@/components/ui/Badge'
+import { ReviewWidget } from '@/components/student/ReviewWidget'
 
 export default function StudentDashboardPage() {
   const { user } = useAuthStore()
@@ -37,6 +38,8 @@ export default function StudentDashboardPage() {
           View learning stats and weak topics
         </Link>
       </div>
+
+      <ReviewWidget />
 
       <Card variant="elevated" padding="lg">
         <h2 className="font-sans font-semibold tracking-tight text-lg text-nearblack mb-4">Enter Exam Code</h2>

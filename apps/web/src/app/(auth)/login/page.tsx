@@ -34,7 +34,9 @@ export default function LoginPage() {
     try {
       await login(data.email, data.password)
       const u = useAuthStore.getState().user
-      if (u?.role === 'STUDENT') {
+      if (u?.role === 'PARENT') {
+        router.push('/parent/dashboard')
+      } else if (u?.role === 'STUDENT') {
         router.push('/dashboard')
       } else {
         router.push('/teacher/dashboard')

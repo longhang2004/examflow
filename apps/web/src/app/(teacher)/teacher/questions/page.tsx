@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { Plus, Pencil, Trash2, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Sparkles } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { Question } from '@examflow/types'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { AIGeneratorModal } from '@/components/teacher/AIGeneratorModal'
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -24,6 +25,7 @@ export default function QuestionsPage() {
   const [type, setType] = useState('')
   const [difficulty, setDifficulty] = useState('')
   const [page, setPage] = useState(1)
+  const [aiModalOpen, setAiModalOpen] = useState(false)
 
   const debouncedSearch = useDebounce(search, 300)
 
@@ -47,12 +49,18 @@ export default function QuestionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">Question Bank</h1>
-        <Link href="/teacher/questions/new">
-          <Button>
-            <Plus className="w-4 h-4" />
-            Create Question
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setAiModalOpen(true)}>
+            <Sparkles className="w-4 h-4" />
+            Sinh bằng AI
           </Button>
-        </Link>
+          <Link href="/teacher/questions/new">
+            <Button>
+              <Plus className="w-4 h-4" />
+              Create Question
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="flex gap-3">
@@ -159,6 +167,8 @@ export default function QuestionsPage() {
           </Button>
         </div>
       )}
+
+      <AIGeneratorModal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} />
     </div>
   )
 }

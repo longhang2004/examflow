@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { AttemptStatus, ExamStatus } from '@prisma/client';
@@ -11,6 +12,7 @@ import { GradingService } from './grading.service';
 import { StartAttemptDto } from './dto/start-attempt.dto';
 import { SaveAnswerDto } from './dto/save-answer.dto';
 import { GradeAttemptDto } from './dto/grade-answer.dto';
+import { ReviewService } from '../review/review.service';
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -23,10 +25,13 @@ function shuffleArray<T>(arr: T[]): T[] {
 
 @Injectable()
 export class AttemptsService {
+  private readonly logger = new Logger(AttemptsService.name);
+
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
     private grading: GradingService,
+    private review?: ReviewService,
   ) {}
 
   async start(userId: string, dto: StartAttemptDto) {
@@ -194,7 +199,59 @@ export class AttemptsService {
     });
 
     await this.redis.del(`attempt:${attemptId}:timer`);
+    await this.addIncorrectAnswersToReview(attempt.userId, attemptId);
     return updated;
+  }
+
+  /**
+   * Internal submit — skips ownership check.
+   * Used by cron jobs and anti-cheat auto-submit.
+   */
+  async submitInternal(attemptId: string) {
+    const attempt = await this.prisma.attempt.findUnique({ where: { id: attemptId } });
+    if (!attempt) throw new NotFoundException('Attempt not found');
+    if (attempt.status !== AttemptStatus.IN_PROGRESS) {
+      return attempt; // already submitted, skip silently
+    }
+
+    const examQuestions = await this.prisma.examQuestion.findMany({
+      where: { examId: attempt.examId },
+      include: { question: true },
+    });
+
+    const answers = attempt.answers as any[];
+    const gradedAnswers = this.grading.gradeAttempt(answers, examQuestions);
+
+    const hasEssay = gradedAnswers.some((a) => a.isCorrect === null && a.pointEarned === null);
+    const status = hasEssay ? AttemptStatus.SUBMITTED : AttemptStatus.GRADED;
+
+    const totalScore = gradedAnswers.reduce((sum, a) => sum + (a.pointEarned ?? 0), 0);
+
+    const updated = await this.prisma.attempt.update({
+      where: { id: attemptId },
+      data: {
+        status,
+        submittedAt: new Date(),
+        totalScore,
+        answers: gradedAnswers as any,
+      },
+    });
+
+    await this.redis.del(`attempt:${attemptId}:timer`);
+    await this.addIncorrectAnswersToReview(attempt.userId, attemptId);
+    return updated;
+  }
+
+  private async addIncorrectAnswersToReview(userId: string, attemptId: string) {
+    if (!this.review) return;
+
+    try {
+      await this.review.bulkAddFromAttempt(userId, attemptId);
+    } catch (error: any) {
+      this.logger.warn(
+        `Failed to add incorrect answers from attempt ${attemptId} to review queue: ${error.message}`,
+      );
+    }
   }
 
   async findOne(userId: string, attemptId: string) {

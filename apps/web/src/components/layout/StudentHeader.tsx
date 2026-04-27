@@ -8,7 +8,9 @@ import { LogOut, User } from 'lucide-react'
 const links = [
   { href: '/dashboard', label: 'Home' },
   { href: '/learning', label: 'My learning' },
+  { href: '/review', label: 'Review' },
   { href: '/history', label: 'History' },
+  { href: '/settings', label: 'Settings' },
 ]
 
 export function StudentHeader() {

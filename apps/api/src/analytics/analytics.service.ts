@@ -93,6 +93,30 @@ export class AnalyticsService {
       };
     });
 
+    // Anti-cheat summary
+    const allAttempts = await this.prisma.attempt.findMany({
+      where: { examId },
+      include: { user: { select: { id: true, displayName: true } } },
+    });
+
+    const flaggedAttempts = allAttempts.filter((a) => a.isFlagged).length;
+    const tabSwitchCounts = allAttempts.map((a) => a.tabSwitchCount);
+    const averageTabSwitches =
+      tabSwitchCounts.length > 0
+        ? tabSwitchCounts.reduce((s, v) => s + v, 0) / tabSwitchCounts.length
+        : 0;
+
+    const suspiciousAttempts = allAttempts
+      .filter((a) => a.tabSwitchCount > 0 || a.fullscreenExits > 0 || a.isFlagged)
+      .map((a) => ({
+        attemptId: a.id,
+        userId: a.userId,
+        displayName: a.user.displayName,
+        tabSwitchCount: a.tabSwitchCount,
+        fullscreenExits: a.fullscreenExits,
+        isFlagged: a.isFlagged,
+      }));
+
     return {
       examId,
       totalAttempts,
@@ -103,6 +127,11 @@ export class AnalyticsService {
       passRate,
       scoreDistribution: buckets,
       questionStats,
+      antiCheatSummary: {
+        flaggedAttempts,
+        averageTabSwitches,
+        suspiciousAttempts,
+      },
     };
   }
 

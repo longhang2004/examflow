@@ -1,4 +1,4 @@
-export type Role = 'STUDENT' | 'TEACHER' | 'ORG_ADMIN' | 'SUPER_ADMIN'
+export type Role = 'STUDENT' | 'TEACHER' | 'PARENT' | 'ORG_ADMIN' | 'SUPER_ADMIN'
 export type Plan = 'FREE' | 'PRO' | 'ENTERPRISE'
 export type ExamStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
 export type AttemptStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED'

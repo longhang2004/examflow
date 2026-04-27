@@ -21,7 +21,7 @@ const schema = z
       .regex(/[A-Z]/, 'Must contain uppercase letter')
       .regex(/[0-9]/, 'Must contain a number'),
     confirmPassword: z.string(),
-    role: z.enum(['STUDENT', 'TEACHER']),
+    role: z.enum(['STUDENT', 'TEACHER', 'PARENT']),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -52,7 +52,8 @@ export default function RegisterPage() {
         role: data.role,
       })
       const u = useAuthStore.getState().user
-      router.push(u?.role === 'STUDENT' ? '/dashboard' : '/teacher/dashboard')
+      if (u?.role === 'PARENT') router.push('/parent/dashboard')
+      else router.push(u?.role === 'STUDENT' ? '/dashboard' : '/teacher/dashboard')
     } catch (err: any) {
       setError(err?.response?.data?.error?.message ?? 'Registration failed')
     }
@@ -67,7 +68,7 @@ export default function RegisterPage() {
       <div className="space-y-2">
         <p className="text-sm font-medium text-charcoal">I am a...</p>
         <div className="flex gap-3">
-          {(['STUDENT', 'TEACHER'] as const).map((r) => (
+          {(['STUDENT', 'TEACHER', 'PARENT'] as const).map((r) => (
             <label
               key={r}
               className={`flex-1 flex items-center justify-center p-3 border-2 rounded-comfortable cursor-pointer transition-all duration-150 ${
@@ -78,7 +79,7 @@ export default function RegisterPage() {
             >
               <input type="radio" value={r} className="sr-only" {...register('role')} />
               <span className="text-sm font-medium text-charcoal">
-                {r === 'STUDENT' ? 'Student' : 'Teacher'}
+                {r === 'STUDENT' ? 'Student' : r === 'TEACHER' ? 'Teacher' : 'Parent'}
               </span>
             </label>
           ))}
