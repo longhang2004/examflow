@@ -5,6 +5,11 @@ import { AppProviders } from '@/components/providers/AppProviders'
 export const metadata: Metadata = {
   title: 'ExamFlow',
   description: 'Online examination platform',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
