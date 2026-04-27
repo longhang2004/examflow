@@ -181,6 +181,8 @@ Quy tắc bắt buộc:
 2. Ngôn ngữ: ${dto.language === 'vi' ? 'Tiếng Việt' : 'English'}
 3. Trả về JSON hợp lệ, không có text thừa trước hoặc sau JSON
 4. Đảm bảo đáp án chính xác và có giải thích rõ ràng
+5. Có thể dùng Markdown ngắn gọn trong content, options.text, explanation, rubric: **bold**, _italic_, \`code\`, xuống dòng
+6. Nếu tài liệu có công thức, giữ công thức ở dạng text/Markdown dễ đọc; không tạo đường dẫn ảnh giả
 
 Format JSON output:
 {
@@ -189,6 +191,7 @@ Format JSON output:
       "type": "MULTIPLE_CHOICE | MULTIPLE_SELECT | TRUE_FALSE | FILL_BLANK | ESSAY",
       "content": "Nội dung câu hỏi",
       "config": {
+        // optional imageUrl for manually attached images later
         // MULTIPLE_CHOICE: { options: [{ id: "a", text: "..." }, ...], correctAnswer: "a" }
         // MULTIPLE_SELECT: { options: [{ id: "a", text: "..." }, ...], correctAnswers: ["a", "b"], partialCredit: true }
         // TRUE_FALSE: { correctAnswer: true | false }

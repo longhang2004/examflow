@@ -18,6 +18,7 @@ export interface User {
 export interface QuestionOption {
   id: string
   text: string
+  imageUrl?: string
 }
 
 export interface QuestionConfig {
@@ -25,6 +26,7 @@ export interface QuestionConfig {
   correctAnswer?: string | boolean
   correctAnswers?: string[]
   explanation?: string
+  imageUrl?: string
   caseSensitive?: boolean
   rubric?: string[]
   maxWords?: number

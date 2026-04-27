@@ -15,6 +15,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { AiModule } from './ai/ai.module';
 import { ReviewModule } from './review/review.module';
 import { ParentModule } from './parent/parent.module';
+import { UploadsModule } from './uploads/uploads.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -41,6 +42,7 @@ import { HealthController } from './health/health.controller';
     AiModule,
     ReviewModule,
     ParentModule,
+    UploadsModule,
   ],
   controllers: [HealthController],
   providers: [

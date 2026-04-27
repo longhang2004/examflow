@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { useExamStore } from '@/store/exam.store'
 import { useFullscreen } from '@/hooks/useFullscreen'
@@ -13,6 +13,7 @@ import { FullscreenOverlay } from '@/components/exam/FullscreenOverlay'
 import { ExamWarningToast } from '@/components/exam/ExamWarningToast'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { RichText } from '@/components/ui/RichText'
 
 function QuestionDisplay({ question, answer, onChange }: { question: any; answer: any; onChange: (v: any) => void }) {
   const config = question.config ?? {}
@@ -27,7 +28,7 @@ function QuestionDisplay({ question, answer, onChange }: { question: any; answer
               {answer === opt.id && <span className="w-2 h-2 bg-ivory rounded-full" />}
             </span>
             <span className="font-medium text-stone text-sm">{opt.id.toUpperCase()}.</span>
-            <span className="text-sm">{opt.text}</span>
+            <RichText text={opt.text} imageUrl={opt.imageUrl} className="text-sm text-charcoal" />
           </label>
         ))}
       </div>
@@ -45,10 +46,10 @@ function QuestionDisplay({ question, answer, onChange }: { question: any; answer
             <label key={opt.id} className={`flex items-center gap-3 p-3 border-2 rounded-comfortable cursor-pointer transition ${checked ? 'border-terracotta bg-terracotta/5' : 'border-border-cream hover:border-ring-warm'}`}>
               <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked ? [...selected, opt.id] : selected.filter((x) => x !== opt.id))} className="sr-only" />
               <span className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${checked ? 'border-terracotta bg-terracotta' : 'border-border-warm'}`}>
-                {checked && <span className="text-white text-xs">✓</span>}
+                {checked && <Check className="h-3 w-3 text-white" />}
               </span>
               <span className="font-medium text-stone text-sm">{opt.id.toUpperCase()}.</span>
-              <span className="text-sm">{opt.text}</span>
+              <RichText text={opt.text} imageUrl={opt.imageUrl} className="text-sm text-charcoal" />
             </label>
           )
         })}
@@ -58,11 +59,11 @@ function QuestionDisplay({ question, answer, onChange }: { question: any; answer
 
   if (question.type === 'TRUE_FALSE') {
     return (
-      <div className="flex gap-4">
+      <div className="grid gap-3 sm:grid-cols-2">
         {[true, false].map((val) => (
           <label key={String(val)} className={`flex-1 flex items-center justify-center p-4 border-2 rounded-comfortable cursor-pointer transition ${answer === val ? 'border-terracotta bg-terracotta/5' : 'border-border-cream hover:border-ring-warm'}`}>
             <input type="radio" checked={answer === val} onChange={() => onChange(val)} className="sr-only" />
-            <span className="font-medium">{val ? '✅ True' : '❌ False'}</span>
+            <span className="font-medium">{val ? 'True' : 'False'}</span>
           </label>
         ))}
       </div>
@@ -251,12 +252,12 @@ export default function AttemptPage() {
       <ExamWarningToast warning={lastWarning} tabSwitchCount={switchCount} />
 
       {/* Header */}
-      <header className="shrink-0 bg-ivory border-b border-border-cream px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="font-bold text-terracotta">ExamFlow</span>
-          <span className="text-stone text-sm">{attempt.exam?.title ?? 'Exam'}</span>
+      <header className="shrink-0 bg-ivory border-b border-border-cream px-4 py-3 sm:px-6 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="shrink-0 font-bold text-terracotta">ExamFlow</span>
+          <span className="truncate text-sm text-stone">{attempt.exam?.title ?? 'Exam'}</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           {switchCount > 0 && (
             <span className="text-xs text-error font-medium px-2 py-0.5 bg-red-50 rounded">
               {switchCount} tab violation{switchCount > 1 ? 's' : ''}
@@ -274,15 +275,19 @@ export default function AttemptPage() {
       </header>
 
       {/* Main Content */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <main className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {currentQuestion && (
-              <div className="max-w-2xl">
+              <div className="mx-auto max-w-3xl">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm text-stone">Question {currentIndex + 1} of {questions.length}</span>
                 </div>
-                <h2 className="text-nearblack font-medium mb-6 text-base leading-relaxed">{currentQuestion.content}</h2>
+                <RichText
+                  text={currentQuestion.content}
+                  imageUrl={currentQuestion.config?.imageUrl}
+                  className="text-nearblack font-medium mb-6 text-base leading-relaxed"
+                />
                 <QuestionDisplay
                   question={currentQuestion}
                   answer={currentAnswer}
@@ -292,21 +297,23 @@ export default function AttemptPage() {
             )}
           </div>
 
-          <div className="shrink-0 border-t bg-ivory px-6 py-3 flex justify-between">
+          <div className="shrink-0 border-t bg-ivory px-4 py-3 sm:px-6 flex justify-between">
             <Button variant="secondary" disabled={currentIndex === 0} onClick={() => setCurrentIndex(currentIndex - 1)}>
-              ← Previous
+              <ChevronLeft className="h-4 w-4" />
+              Previous
             </Button>
             <Button variant="secondary" disabled={currentIndex === questions.length - 1} onClick={() => setCurrentIndex(currentIndex + 1)}>
-              Next →
+              Next
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </main>
 
         {/* Sidebar */}
-        <aside className="shrink-0 w-64 bg-ivory border-l border-border-cream p-4 flex flex-col gap-4 overflow-y-auto">
+        <aside className="flex max-h-56 shrink-0 flex-col gap-4 overflow-y-auto border-t border-border-cream bg-ivory p-4 lg:max-h-none lg:w-64 lg:border-l lg:border-t-0">
           <div>
             <h3 className="text-xs font-semibold text-stone uppercase mb-2">Questions</h3>
-            <div className="grid grid-cols-5 gap-1">
+            <div className="grid grid-cols-8 gap-1 lg:grid-cols-5">
               {questions.map((q, i) => {
                 const answered = answers[q.id] !== undefined
                 const viewed = viewedQuestions.has(q.id)

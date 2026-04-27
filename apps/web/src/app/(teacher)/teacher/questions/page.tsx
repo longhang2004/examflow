@@ -9,6 +9,11 @@ import { Question } from '@examflow/types'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { AIGeneratorModal } from '@/components/teacher/AIGeneratorModal'
+import { RichText } from '@/components/ui/RichText'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { DifficultyBadge } from '@/components/ui/DifficultyBadge'
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -47,12 +52,14 @@ export default function QuestionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">Question Bank</h1>
-        <div className="flex gap-2">
+      <PageHeader
+        title="Question Bank"
+        description="Create reusable questions manually or generate them from PDF, DOCX, TXT, or pasted text."
+        actions={
+          <>
           <Button variant="secondary" onClick={() => setAiModalOpen(true)}>
             <Sparkles className="w-4 h-4" />
-            Sinh bằng AI
+            Generate with AI
           </Button>
           <Link href="/teacher/questions/new">
             <Button>
@@ -60,11 +67,12 @@ export default function QuestionsPage() {
               Create Question
             </Button>
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      <div className="flex gap-3">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-col gap-3 rounded-comfortable border border-border-cream bg-ivory p-3 sm:flex-row">
+        <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-stone" />
           <input
             type="text"
@@ -81,8 +89,8 @@ export default function QuestionsPage() {
           className="border border-border-warm rounded-comfortable px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta"
         >
           <option value="">All Types</option>
-          <option value="MULTIPLE_CHOICE">Multiple Choice</option>
-          <option value="MULTIPLE_SELECT">Multiple Select</option>
+          <option value="MULTIPLE_CHOICE">Single choice</option>
+          <option value="MULTIPLE_SELECT">Multiple select</option>
           <option value="TRUE_FALSE">True / False</option>
           <option value="FILL_BLANK">Fill Blank</option>
           <option value="ESSAY">Essay</option>
@@ -101,7 +109,7 @@ export default function QuestionsPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-stone text-sm">Loading...</p>
+        <LoadingState label="Loading questions..." />
       ) : (
         <div className="space-y-2">
           {data?.data?.map((q: Question) => (
@@ -112,9 +120,13 @@ export default function QuestionsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <Badge>{q.type.replaceAll('_', ' ')}</Badge>
-                  <span className="text-xs text-amber-600">{'⭐'.repeat(q.difficulty)}</span>
+                  <DifficultyBadge value={q.difficulty} />
                 </div>
-                <p className="text-sm text-charcoal truncate">{q.content}</p>
+                <RichText
+                  text={q.content}
+                  imageUrl={q.config?.imageUrl}
+                  className="text-sm text-charcoal line-clamp-2"
+                />
                 <div className="flex gap-1 mt-2 flex-wrap">
                   {q.tags.map((tag) => (
                     <span key={tag} className="text-xs bg-sand text-olive px-1.5 py-0.5 rounded">
@@ -144,7 +156,17 @@ export default function QuestionsPage() {
           ))}
 
           {data?.data?.length === 0 && (
-            <p className="text-center text-stone py-8">No questions found.</p>
+            <EmptyState
+              icon={<Search className="h-5 w-5" />}
+              title="No questions found"
+              description="Adjust your filters, create a question manually, or generate questions from a document."
+              action={
+                <Button variant="secondary" onClick={() => setAiModalOpen(true)}>
+                  <Sparkles className="w-4 h-4" />
+                  Generate with AI
+                </Button>
+              }
+            />
           )}
         </div>
       )}

@@ -6,13 +6,17 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, X } from 'lucide-react'
+import { ArrowLeft, Plus, X } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { Question, QuestionType, QuestionConfig } from '@examflow/types'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Alert } from '@/components/ui/Alert'
-import { Spinner } from '@/components/ui/Spinner'
+import { ImageUploadButton } from '@/components/ui/ImageUploadButton'
+import { RichTextEditor } from '@/components/ui/RichTextEditor'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { LoadingState } from '@/components/ui/LoadingState'
 
 const TYPE_LABELS: Record<QuestionType, string> = {
   MULTIPLE_CHOICE: 'Multiple Choice',
@@ -42,8 +46,8 @@ function OptionsEditor({
   setMsCorrects,
 }: {
   type: 'MULTIPLE_CHOICE' | 'MULTIPLE_SELECT'
-  options: { id: string; text: string }[]
-  setOptions: (v: { id: string; text: string }[]) => void
+  options: { id: string; text: string; imageUrl?: string }[]
+  setOptions: (v: { id: string; text: string; imageUrl?: string }[]) => void
   mcCorrect: string
   setMcCorrect: (v: string) => void
   msCorrects: string[]
@@ -53,7 +57,7 @@ function OptionsEditor({
     <div className="space-y-2">
       <p className="text-sm font-medium text-charcoal">Options</p>
       {options.map((opt, i) => (
-        <div key={opt.id} className="flex items-center gap-2">
+        <div key={opt.id} className="flex flex-col gap-2 rounded-comfortable border border-border-cream bg-sand/20 p-3 sm:flex-row sm:items-center">
           {type === 'MULTIPLE_CHOICE' ? (
             <input type="radio" name="mcCorrect" value={opt.id} checked={mcCorrect === opt.id}
               onChange={() => setMcCorrect(opt.id)} className="shrink-0" />
@@ -67,14 +71,23 @@ function OptionsEditor({
           )}
           <span className="font-medium text-sm w-5 text-stone">{opt.id.toUpperCase()}.</span>
           <input
-            className="flex-1 border border-border-warm rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-terracotta"
+            className="min-w-0 flex-1 rounded-comfortable border border-border-warm bg-ivory px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-focus/20"
             value={opt.text}
             onChange={(e) => setOptions(options.map((o, j) => j === i ? { ...o, text: e.target.value } : o))}
-            placeholder={`Option ${opt.id.toUpperCase()}`}
+            placeholder={`Option ${opt.id.toUpperCase()} (Markdown supported)`}
+          />
+          <ImageUploadButton
+            imageUrl={opt.imageUrl}
+            onChange={(url) => setOptions(options.map((o, j) => j === i ? { ...o, imageUrl: url } : o))}
           />
           {options.length > 2 && (
-            <button type="button" onClick={() => setOptions(options.filter((_, j) => j !== i))}>
-              <X className="w-4 h-4 text-stone" />
+            <button
+              type="button"
+              aria-label={`Remove option ${opt.id.toUpperCase()}`}
+              onClick={() => setOptions(options.filter((_, j) => j !== i))}
+              className="rounded-subtle p-1.5 text-stone hover:bg-sand hover:text-error"
+            >
+              <X className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -98,7 +111,8 @@ export default function EditQuestionPage() {
   const queryClient = useQueryClient()
 
   const [error, setError] = useState('')
-  const [mcOptions, setMcOptions] = useState([
+  const [questionImageUrl, setQuestionImageUrl] = useState<string | undefined>()
+  const [mcOptions, setMcOptions] = useState<Array<{ id: string; text: string; imageUrl?: string }>>([
     { id: 'a', text: '' }, { id: 'b', text: '' }, { id: 'c', text: '' }, { id: 'd', text: '' },
   ])
   const [mcCorrect, setMcCorrect] = useState('a')
@@ -114,10 +128,13 @@ export default function EditQuestionPage() {
     queryFn: () => api.get<Question>(`/questions/${questionId}`),
   })
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { difficulty: 1, isPublic: false },
+    defaultValues: { content: '', explanation: '', difficulty: 1, isPublic: false },
   })
+
+  const content = watch('content')
+  const explanation = watch('explanation')
 
   const populateConfig = useCallback((type: QuestionType, cfg: QuestionConfig) => {
     if (type === 'MULTIPLE_CHOICE' || type === 'MULTIPLE_SELECT') {
@@ -133,6 +150,7 @@ export default function EditQuestionPage() {
       if (cfg.rubric?.length) setEssayRubric(cfg.rubric)
       if (cfg.maxWords) setEssayMaxWords(String(cfg.maxWords))
     }
+    setQuestionImageUrl(cfg.imageUrl)
   }, [])
 
   useEffect(() => {
@@ -160,11 +178,11 @@ export default function EditQuestionPage() {
     if (!question) return {}
     const exp = explanation || undefined
     switch (question.type) {
-      case 'MULTIPLE_CHOICE': return { options: mcOptions, correctAnswer: mcCorrect, explanation: exp }
-      case 'MULTIPLE_SELECT': return { options: mcOptions, correctAnswers: msCorrects, explanation: exp }
-      case 'TRUE_FALSE': return { correctAnswer: tfAnswer, explanation: exp }
-      case 'FILL_BLANK': return { correctAnswers: fillAnswers.filter(Boolean), caseSensitive: fillCaseSensitive, explanation: exp }
-      case 'ESSAY': return { rubric: essayRubric.filter(Boolean), maxWords: essayMaxWords ? Number(essayMaxWords) : undefined, explanation: exp }
+      case 'MULTIPLE_CHOICE': return { options: mcOptions, correctAnswer: mcCorrect, explanation: exp, imageUrl: questionImageUrl }
+      case 'MULTIPLE_SELECT': return { options: mcOptions, correctAnswers: msCorrects, explanation: exp, imageUrl: questionImageUrl }
+      case 'TRUE_FALSE': return { correctAnswer: tfAnswer, explanation: exp, imageUrl: questionImageUrl }
+      case 'FILL_BLANK': return { correctAnswers: fillAnswers.filter(Boolean), caseSensitive: fillCaseSensitive, explanation: exp, imageUrl: questionImageUrl }
+      case 'ESSAY': return { rubric: essayRubric.filter(Boolean), maxWords: essayMaxWords ? Number(essayMaxWords) : undefined, explanation: exp, imageUrl: questionImageUrl }
       default: return {}
     }
   }
@@ -181,11 +199,7 @@ export default function EditQuestionPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Spinner className="w-8 h-8" />
-      </div>
-    )
+    return <LoadingState label="Loading question..." />
   }
 
   if (!question) {
@@ -193,29 +207,30 @@ export default function EditQuestionPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-sans font-semibold tracking-tight">Edit Question</h1>
-          <p className="text-sm text-stone mt-1">Type: {TYPE_LABELS[question.type]}</p>
-        </div>
-        <button type="button" onClick={() => router.back()} className="text-sm text-terracotta hover:underline">
-          Back
-        </button>
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl space-y-6">
+      <PageHeader
+        title="Edit Question"
+        description={`Type: ${TYPE_LABELS[question.type]}`}
+        actions={(
+          <Button type="button" variant="secondary" size="sm" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+        )}
+      />
 
       {error && <Alert type="error" message={error} />}
 
-      <div>
-        <label htmlFor="question-content" className="text-sm font-medium text-charcoal">Question Content</label>
-        <textarea
-          id="question-content"
-          className="mt-1 w-full border border-border-warm rounded-comfortable px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta min-h-24"
-          placeholder="Enter your question..."
-          {...register('content')}
+      <Card className="space-y-6">
+        <RichTextEditor
+          label="Question Content"
+          value={content ?? ''}
+          onChange={(value) => setValue('content', value, { shouldValidate: true })}
+          placeholder="Enter your question. Supports **bold**, _italic_, `code`, and line breaks."
+          error={errors.content?.message}
+          imageUrl={questionImageUrl}
+          onImageChange={setQuestionImageUrl}
         />
-        {errors.content && <p className="text-xs text-error">{errors.content.message}</p>}
-      </div>
 
       {(question.type === 'MULTIPLE_CHOICE' || question.type === 'MULTIPLE_SELECT') && (
         <OptionsEditor
@@ -230,9 +245,9 @@ export default function EditQuestionPage() {
       )}
 
       {question.type === 'TRUE_FALSE' && (
-        <div className="flex gap-4">
+        <div className="grid gap-2 sm:grid-cols-2">
           {[true, false].map((val) => (
-            <label key={String(val)} className={`flex items-center gap-2 p-3 border-2 rounded-comfortable cursor-pointer ${tfAnswer === val ? 'border-terracotta bg-terracotta/5' : 'border-border-cream'}`}>
+            <label key={String(val)} className={`flex cursor-pointer items-center gap-2 rounded-comfortable border p-3 ${tfAnswer === val ? 'border-terracotta bg-terracotta/5' : 'border-border-cream'}`}>
               <input type="radio" checked={tfAnswer === val} onChange={() => setTfAnswer(val)} className="sr-only" />
               <span className="font-medium">{val ? 'True' : 'False'}</span>
             </label>
@@ -246,13 +261,13 @@ export default function EditQuestionPage() {
           {fillAnswers.map((ans, i) => (
             <div key={`fill-${i}`} className="flex gap-2">
               <input
-                className="flex-1 border border-border-warm rounded px-2 py-1 text-sm"
+                className="min-w-0 flex-1 rounded-comfortable border border-border-warm bg-ivory px-3 py-2 text-sm"
                 value={ans}
                 onChange={(e) => setFillAnswers(fillAnswers.map((a, j) => j === i ? e.target.value : a))}
               />
               {fillAnswers.length > 1 && (
-                <button type="button" onClick={() => setFillAnswers(fillAnswers.filter((_, j) => j !== i))}>
-                  <X className="w-4 h-4 text-stone" />
+                <button type="button" aria-label="Remove answer" onClick={() => setFillAnswers(fillAnswers.filter((_, j) => j !== i))} className="rounded-subtle p-1.5 text-stone hover:bg-sand hover:text-error">
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -274,14 +289,14 @@ export default function EditQuestionPage() {
             {essayRubric.map((r, i) => (
               <div key={`rubric-${i}`} className="flex gap-2 mb-2">
                 <input
-                  className="flex-1 border border-border-warm rounded px-2 py-1 text-sm"
+                  className="min-w-0 flex-1 rounded-comfortable border border-border-warm bg-ivory px-3 py-2 text-sm"
                   value={r}
                   onChange={(e) => setEssayRubric(essayRubric.map((x, j) => j === i ? e.target.value : x))}
                   placeholder="Rubric item..."
                 />
                 {essayRubric.length > 1 && (
-                  <button type="button" onClick={() => setEssayRubric(essayRubric.filter((_, j) => j !== i))}>
-                    <X className="w-4 h-4 text-stone" />
+                  <button type="button" aria-label="Remove criteria" onClick={() => setEssayRubric(essayRubric.filter((_, j) => j !== i))} className="rounded-subtle p-1.5 text-stone hover:bg-sand hover:text-error">
+                    <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -294,23 +309,23 @@ export default function EditQuestionPage() {
         </div>
       )}
 
-      <div>
-        <label htmlFor="question-explanation" className="text-sm font-medium text-charcoal">Explanation (optional)</label>
-        <textarea
-          id="question-explanation"
-          className="mt-1 w-full border border-border-warm rounded-comfortable px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta min-h-16"
-          placeholder="Explain the correct answer..."
-          {...register('explanation')}
+        <RichTextEditor
+          label="Explanation (optional)"
+          value={explanation ?? ''}
+          onChange={(value) => setValue('explanation', value)}
+          placeholder="Explain the correct answer. Markdown supported."
+          minHeightClassName="min-h-16"
         />
-      </div>
+      </Card>
 
-      <Input
-        label="Tags (comma-separated)"
-        placeholder="math, algebra, calculus"
-        {...register('tags')}
-      />
+      <Card className="space-y-5">
+        <Input
+          label="Tags (comma-separated)"
+          placeholder="math, algebra, calculus"
+          {...register('tags')}
+        />
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
         <div>
           <label htmlFor="difficulty-select" className="text-sm font-medium text-charcoal">Difficulty</label>
           <select
@@ -328,10 +343,11 @@ export default function EditQuestionPage() {
         </label>
       </div>
 
-      <div className="flex gap-3">
-        <Button type="submit" loading={mutation.isPending}>Save Changes</Button>
-        <Button type="button" variant="secondary" onClick={() => router.back()}>Cancel</Button>
-      </div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <Button type="submit" loading={mutation.isPending}>Save Changes</Button>
+          <Button type="button" variant="secondary" onClick={() => router.back()}>Cancel</Button>
+        </div>
+      </Card>
     </form>
   )
 }

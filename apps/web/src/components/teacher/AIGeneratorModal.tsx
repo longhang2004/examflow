@@ -7,10 +7,17 @@ import { api } from '@/lib/api-client'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { Alert } from '@/components/ui/Alert'
+import { RichText } from '@/components/ui/RichText'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { DifficultyBadge } from '@/components/ui/DifficultyBadge'
 
 interface AIGeneratorModalProps {
   isOpen: boolean
   onClose: () => void
+  examId?: string
+  examQuestionStartOrder?: number
+  onSaved?: () => void
 }
 
 const QUESTION_TYPES = [
@@ -22,12 +29,26 @@ const QUESTION_TYPES = [
 ]
 
 const DIFFICULTIES = [
-  { value: 1, label: 'Dễ', icon: '⭐' },
-  { value: 2, label: 'Trung bình', icon: '⭐⭐' },
-  { value: 3, label: 'Khó', icon: '⭐⭐⭐' },
+  { value: 1, label: 'Dễ' },
+  { value: 2, label: 'Trung bình' },
+  { value: 3, label: 'Khó' },
 ]
 
-export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
+const ACCEPTED_MIME_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+]
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+
+export function AIGeneratorModal({
+  isOpen,
+  onClose,
+  examId,
+  examQuestionStartOrder = 0,
+  onSaved,
+}: AIGeneratorModalProps) {
   const queryClient = useQueryClient()
   const [step, setStep] = useState(1)
   const [inputMode, setInputMode] = useState<'file' | 'text'>('text')
@@ -41,6 +62,8 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
   const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([])
   const [selectedQuestions, setSelectedQuestions] = useState<Set<number>>(new Set())
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [inputError, setInputError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const { data: usage } = useQuery({
@@ -67,7 +90,10 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
           },
           body: formData,
         })
-        if (!res.ok) throw new Error('Failed to generate')
+        if (!res.ok) {
+          const payload = await res.json().catch(() => null)
+          throw new Error(payload?.error?.message ?? 'Failed to generate questions from this file')
+        }
         const payload = await res.json()
         return payload?.data ?? payload
       } else {
@@ -92,29 +118,77 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
 
   const handleSaveSelected = useCallback(async () => {
     setSaving(true)
+    setSaveError('')
     try {
       const toSave = generatedQuestions.filter((_, i) => selectedQuestions.has(i))
+      const savedQuestions = []
       for (const q of toSave) {
         const config = q.explanation
           ? { ...q.config, explanation: q.explanation }
           : q.config
-        await api.post('/questions', {
+        const saved = await api.post<any>('/questions', {
           type: q.type,
           content: q.content,
           config,
           tags: q.tags ?? [],
           difficulty: q.difficulty ?? difficulty,
         })
+        savedQuestions.push(saved)
+      }
+
+      if (examId && savedQuestions.length > 0) {
+        await api.post(`/exams/${examId}/questions`, {
+          questions: savedQuestions.map((q, i) => ({
+            questionId: q.id,
+            point: 1,
+            order: examQuestionStartOrder + i + 1,
+          })),
+        })
       }
       queryClient.invalidateQueries({ queryKey: ['questions'] })
+      if (examId) {
+        queryClient.invalidateQueries({ queryKey: ['exam', examId] })
+      }
+      onSaved?.()
       onClose()
       resetState()
-    } catch {
-      // Handle error silently
+    } catch (error: any) {
+      setSaveError(error?.response?.data?.error?.message ?? error?.message ?? 'Could not save generated questions')
     } finally {
       setSaving(false)
     }
-  }, [generatedQuestions, selectedQuestions, difficulty, queryClient, onClose])
+  }, [
+    generatedQuestions,
+    selectedQuestions,
+    difficulty,
+    examId,
+    examQuestionStartOrder,
+    queryClient,
+    onSaved,
+    onClose,
+  ])
+
+  const handleFileSelect = (nextFile: File | null) => {
+    setInputError('')
+    if (!nextFile) {
+      setFile(null)
+      return
+    }
+
+    if (!ACCEPTED_MIME_TYPES.includes(nextFile.type)) {
+      setInputError('Only PDF, DOCX, and TXT files are supported.')
+      setFile(null)
+      return
+    }
+
+    if (nextFile.size > MAX_FILE_SIZE) {
+      setInputError('File must be 10MB or smaller.')
+      setFile(null)
+      return
+    }
+
+    setFile(nextFile)
+  }
 
   const resetState = () => {
     setStep(1)
@@ -122,6 +196,8 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
     setText('')
     setGeneratedQuestions([])
     setSelectedQuestions(new Set())
+    setSaveError('')
+    setInputError('')
   }
 
   const toggleType = (t: string) => {
@@ -144,16 +220,18 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="">
-      <div className="min-w-[500px]">
+      <div className="w-full max-w-3xl sm:min-w-[520px]">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-white" />
+        <div className="mb-6 flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-comfortable bg-terracotta/10 ring-1 ring-inset ring-terracotta/20">
+            <Sparkles className="h-5 w-5 text-terracotta" />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-nearblack">Sinh câu hỏi bằng AI</h2>
-            <p className="text-xs text-stone">
-              Bước {step}/3 — {usage ? `Còn ${usage.limit - usage.used} lượt trong giờ này` : ''}
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-nearblack">
+              {examId ? 'Sinh câu hỏi cho đề thi' : 'Sinh câu hỏi bằng AI'}
+            </h2>
+            <p className="text-sm text-stone">
+              Bước {step}/3{usage ? ` · Còn ${Math.max(usage.limit - usage.used, 0)} lượt trong giờ này` : ''}
             </p>
           </div>
         </div>
@@ -163,7 +241,7 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
           {[1, 2, 3].map((s) => (
             <div
               key={s}
-              className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-indigo-500' : 'bg-sand'}`}
+              className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-terracotta' : 'bg-sand'}`}
             />
           ))}
         </div>
@@ -171,20 +249,15 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
         {/* Step 1: Upload/Paste */}
         {step === 1 && (
           <div className="space-y-4">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setInputMode('text')}
-                className={`flex-1 px-4 py-2 text-sm rounded-lg transition ${inputMode === 'text' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'bg-sand text-stone'}`}
-              >
-                <FileText className="w-4 h-4 inline mr-1" /> Dán văn bản
-              </button>
-              <button
-                onClick={() => setInputMode('file')}
-                className={`flex-1 px-4 py-2 text-sm rounded-lg transition ${inputMode === 'file' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'bg-sand text-stone'}`}
-              >
-                <Upload className="w-4 h-4 inline mr-1" /> Upload file
-              </button>
-            </div>
+            <SegmentedControl
+              ariaLabel="AI input source"
+              value={inputMode}
+              onChange={(value) => setInputMode(value as 'file' | 'text')}
+              options={[
+                { value: 'text', label: 'Dán văn bản' },
+                { value: 'file', label: 'Upload file' },
+              ]}
+            />
 
             {inputMode === 'text' ? (
               <div>
@@ -192,28 +265,34 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder="Dán nội dung tài liệu vào đây..."
-                  className="w-full h-48 border border-border-warm rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="h-48 w-full resize-none rounded-comfortable border border-border-warm bg-ivory px-3 py-2 text-sm text-nearblack focus:outline-none focus:ring-2 focus:ring-focus/20"
                 />
-                <p className="text-xs text-stone mt-1 text-right">{text.length} / 15000</p>
+                <p className="mt-1 text-right text-xs text-stone">{text.length} / 15000</p>
               </div>
             ) : (
               <div
                 onClick={() => fileRef.current?.click()}
-                className="border-2 border-dashed border-border-warm rounded-lg p-8 text-center cursor-pointer hover:border-indigo-400 transition"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  handleFileSelect(e.dataTransfer.files?.[0] ?? null)
+                }}
+                className="cursor-pointer rounded-comfortable border-2 border-dashed border-border-warm bg-sand/30 p-8 text-center transition hover:border-terracotta hover:bg-terracotta/5"
               >
                 <input
                   ref={fileRef}
                   type="file"
                   accept=".pdf,.docx,.txt"
                   className="hidden"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
                 />
                 {file ? (
                   <div className="space-y-2">
-                    <FileText className="w-8 h-8 mx-auto text-indigo-500" />
+                    <FileText className="mx-auto h-8 w-8 text-terracotta" />
                     <p className="text-sm text-charcoal font-medium">{file.name}</p>
                     <p className="text-xs text-stone">{(file.size / 1024).toFixed(0)} KB</p>
                     <button
+                      type="button"
                       onClick={(e) => { e.stopPropagation(); setFile(null) }}
                       className="text-xs text-error hover:underline"
                     >
@@ -223,15 +302,16 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
                 ) : (
                   <div className="space-y-2">
                     <Upload className="w-8 h-8 mx-auto text-stone" />
-                    <p className="text-sm text-stone">Kéo thả hoặc click để chọn file</p>
+                    <p className="text-sm font-medium text-charcoal">Kéo thả hoặc click để chọn file</p>
                     <p className="text-xs text-stone">PDF, DOCX, TXT — tối đa 10MB</p>
                   </div>
                 )}
               </div>
             )}
+            {inputError && <Alert type="error" message={inputError} />}
 
             <div className="flex justify-end">
-              <Button onClick={() => setStep(2)} disabled={!canProceedStep1}>
+              <Button type="button" onClick={() => setStep(2)} disabled={!canProceedStep1}>
                 Tiếp tục <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
@@ -243,31 +323,35 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-charcoal block mb-2">Loại câu hỏi cần sinh</label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {QUESTION_TYPES.map((t) => (
                   <button
+                    type="button"
                     key={t.value}
                     onClick={() => toggleType(t.value)}
-                    className={`px-3 py-1.5 text-xs rounded-full border transition ${
-                      selectedTypes.includes(t.value) ? 'bg-indigo-50 border-indigo-400 text-indigo-700' : 'border-border-warm text-stone hover:border-ring-warm'
+                    className={`flex items-center justify-between rounded-comfortable border px-3 py-2 text-left text-sm transition ${
+                      selectedTypes.includes(t.value) ? 'border-terracotta bg-terracotta/5 text-nearblack' : 'border-border-warm text-stone hover:border-ring-warm'
                     }`}
                   >
-                    {selectedTypes.includes(t.value) && <Check className="w-3 h-3 inline mr-1" />}
-                    {t.label}
+                    <span>{t.label}</span>
+                    {selectedTypes.includes(t.value) && <Check className="h-4 w-4 text-terracotta" />}
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-charcoal block mb-2">Số câu hỏi: {count}</label>
+              <div className="mb-2 flex items-center justify-between">
+                <label className="text-sm font-medium text-charcoal">Số câu hỏi</label>
+                <span className="rounded-subtle bg-sand px-2 py-0.5 text-xs font-medium text-charcoal">{count}</span>
+              </div>
               <input
                 type="range"
                 min={1}
                 max={30}
                 value={count}
                 onChange={(e) => setCount(Number(e.target.value))}
-                className="w-full accent-indigo-500"
+                className="w-full accent-terracotta"
               />
               <div className="flex justify-between text-xs text-stone">
                 <span>1</span><span>30</span>
@@ -276,16 +360,17 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
 
             <div>
               <label className="text-sm font-medium text-charcoal block mb-2">Độ khó</label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {DIFFICULTIES.map((d) => (
                   <button
+                    type="button"
                     key={d.value}
                     onClick={() => setDifficulty(d.value as 1 | 2 | 3)}
-                    className={`flex-1 px-3 py-2 text-sm rounded-lg transition ${
-                      difficulty === d.value ? 'bg-indigo-50 border border-indigo-400 text-indigo-700 font-medium' : 'bg-sand text-stone'
+                    className={`rounded-comfortable border px-3 py-2 text-sm transition ${
+                      difficulty === d.value ? 'border-terracotta bg-terracotta/5 text-nearblack font-medium' : 'border-transparent bg-sand text-stone'
                     }`}
                   >
-                    {d.icon} {d.label}
+                    {d.label}
                   </button>
                 ))}
               </div>
@@ -293,13 +378,14 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
 
             <div>
               <label className="text-sm font-medium text-charcoal block mb-2">Ngôn ngữ</label>
-              <div className="flex gap-2">
-                {[{ v: 'vi' as const, l: '🇻🇳 Tiếng Việt' }, { v: 'en' as const, l: '🇬🇧 English' }].map((lang) => (
+              <div className="grid grid-cols-2 gap-2">
+                {[{ v: 'vi' as const, l: 'Tiếng Việt' }, { v: 'en' as const, l: 'English' }].map((lang) => (
                   <button
+                    type="button"
                     key={lang.v}
                     onClick={() => setLanguage(lang.v)}
-                    className={`flex-1 px-3 py-2 text-sm rounded-lg transition ${
-                      language === lang.v ? 'bg-indigo-50 border border-indigo-400 text-indigo-700' : 'bg-sand text-stone'
+                    className={`rounded-comfortable border px-3 py-2 text-sm transition ${
+                      language === lang.v ? 'border-terracotta bg-terracotta/5 text-nearblack font-medium' : 'border-transparent bg-sand text-stone'
                     }`}
                   >
                     {lang.l}
@@ -315,15 +401,16 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
                 onChange={(e) => setAdditionalInstructions(e.target.value)}
                 placeholder="VD: Tập trung vào phần định nghĩa và ví dụ"
                 maxLength={500}
-                className="w-full h-20 border border-border-warm rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="h-20 w-full resize-none rounded-comfortable border border-border-warm bg-ivory px-3 py-2 text-sm text-nearblack focus:outline-none focus:ring-2 focus:ring-focus/20"
               />
             </div>
 
-            <div className="flex justify-between">
-              <Button variant="secondary" onClick={() => setStep(1)}>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+              <Button type="button" variant="secondary" onClick={() => setStep(1)}>
                 <ChevronLeft className="w-4 h-4" /> Quay lại
               </Button>
               <Button
+                type="button"
                 onClick={() => generateMutation.mutate()}
                 loading={generateMutation.isPending}
                 disabled={!canProceedStep2}
@@ -334,7 +421,14 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
             </div>
 
             {generateMutation.isError && (
-              <p className="text-sm text-error text-center">Có lỗi xảy ra. Vui lòng thử lại.</p>
+              <Alert
+                type="error"
+                message={
+                  generateMutation.error instanceof Error
+                    ? generateMutation.error.message
+                    : 'Có lỗi xảy ra. Vui lòng thử lại.'
+                }
+              />
             )}
           </div>
         )}
@@ -344,16 +438,19 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-stone">
-                Đã sinh {generatedQuestions.length} câu hỏi. Chọn câu muốn thêm vào ngân hàng.
+                Đã sinh {generatedQuestions.length} câu hỏi. Chọn câu muốn thêm vào{' '}
+                {examId ? 'đề thi' : 'ngân hàng'}.
               </p>
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => setSelectedQuestions(new Set(generatedQuestions.map((_, i) => i)))}
-                  className="text-xs text-indigo-600 hover:underline"
+                  className="text-xs text-link hover:underline"
                 >
                   Chọn tất cả
                 </button>
                 <button
+                  type="button"
                   onClick={() => setSelectedQuestions(new Set())}
                   className="text-xs text-stone hover:underline"
                 >
@@ -361,30 +458,35 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
                 </button>
               </div>
             </div>
+            {saveError && <Alert type="error" message={saveError} />}
 
-            <div className="max-h-[400px] overflow-y-auto space-y-3 pr-1">
+            <div className="max-h-[48vh] space-y-3 overflow-y-auto pr-1">
               {generatedQuestions.map((q, i) => (
                 <div
                   key={i}
                   onClick={() => toggleQuestion(i)}
-                  className={`p-3 border rounded-lg cursor-pointer transition ${
-                    selectedQuestions.has(i) ? 'border-indigo-400 bg-indigo-50/50' : 'border-border-cream bg-white'
+                  className={`cursor-pointer rounded-comfortable border p-3 transition ${
+                    selectedQuestions.has(i) ? 'border-terracotta bg-terracotta/5' : 'border-border-cream bg-ivory'
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 mt-0.5 ${
-                      selectedQuestions.has(i) ? 'border-indigo-500 bg-indigo-500' : 'border-border-warm'
+                      selectedQuestions.has(i) ? 'border-terracotta bg-terracotta' : 'border-border-warm'
                     }`}>
                       {selectedQuestions.has(i) && <Check className="w-3 h-3 text-white" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
                         <Badge>{q.type?.replaceAll('_', ' ')}</Badge>
-                        <span className="text-xs text-amber-600">{'⭐'.repeat(q.difficulty || 2)}</span>
+                        <DifficultyBadge value={q.difficulty || 2} />
                       </div>
-                      <p className="text-sm text-charcoal">{q.content}</p>
+                      <RichText
+                        text={q.content}
+                        imageUrl={q.config?.imageUrl}
+                        className="text-sm text-charcoal"
+                      />
                       {q.explanation && (
-                        <p className="text-xs text-stone mt-1 italic">💡 {q.explanation}</p>
+                        <RichText text={q.explanation} className="text-xs text-stone mt-1 italic" />
                       )}
                     </div>
                   </div>
@@ -392,21 +494,22 @@ export function AIGeneratorModal({ isOpen, onClose }: AIGeneratorModalProps) {
               ))}
             </div>
 
-            <div className="flex justify-between">
-              <div className="flex gap-2">
-                <Button variant="secondary" onClick={() => setStep(2)}>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="secondary" onClick={() => setStep(2)}>
                   <ChevronLeft className="w-4 h-4" /> Quay lại
                 </Button>
-                <Button variant="secondary" onClick={() => generateMutation.mutate()} loading={generateMutation.isPending}>
+                <Button type="button" variant="secondary" onClick={() => generateMutation.mutate()} loading={generateMutation.isPending}>
                   <RefreshCw className="w-4 h-4" /> Sinh lại
                 </Button>
               </div>
               <Button
+                type="button"
                 onClick={handleSaveSelected}
                 loading={saving}
                 disabled={selectedQuestions.size === 0}
               >
-                Thêm {selectedQuestions.size} câu vào ngân hàng
+                Thêm {selectedQuestions.size} câu vào {examId ? 'đề thi' : 'ngân hàng'}
               </Button>
             </div>
           </div>

@@ -28,16 +28,16 @@ export function Modal({ isOpen, onClose, title, children, className = '' }: Moda
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div
         className="fixed inset-0 bg-nearblack/40 backdrop-blur-sm"
         onClick={onClose}
       />
       <div
         className={`
-          relative bg-ivory rounded-very-rounded shadow-whisper
+          relative bg-ivory rounded-t-very-rounded shadow-whisper sm:rounded-very-rounded
           border border-border-cream
-          w-full mx-4 max-h-[85vh] overflow-y-auto
+          w-full mx-0 max-h-[92vh] overflow-y-auto sm:mx-4 sm:max-h-[85vh]
           ${className || 'max-w-lg'}
         `}
       >

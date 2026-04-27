@@ -22,9 +22,7 @@ export function FullscreenOverlay({
         </div>
 
         <div>
-          <h2 className="text-xl font-bold text-nearblack">
-            ⚠️ Bạn đã thoát chế độ toàn màn hình
-          </h2>
+          <h2 className="text-xl font-bold text-nearblack">Bạn đã thoát chế độ toàn màn hình</h2>
           <p className="text-sm text-stone mt-2">
             Vui lòng quay lại để tiếp tục bài thi. Lần thoát: {exitCount}/{maxExits}
           </p>

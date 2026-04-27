@@ -8,6 +8,7 @@ import { api } from '@/lib/api-client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { RichText } from '@/components/ui/RichText'
 
 interface ReviewCard {
   id: string
@@ -48,7 +49,7 @@ function renderAnswerInput(question: ReviewCard['question'], answer: any, setAns
             }`}
           >
             <span className="text-xs font-semibold text-stone">{opt.id.toUpperCase()}.</span>
-            <span className="text-sm text-charcoal">{opt.text}</span>
+            <RichText text={opt.text} imageUrl={opt.imageUrl} className="text-sm text-charcoal" />
           </button>
         ))}
       </div>
@@ -75,7 +76,7 @@ function renderAnswerInput(question: ReviewCard['question'], answer: any, setAns
               }`}
             >
               <span className="text-xs font-semibold text-stone">{opt.id.toUpperCase()}.</span>
-              <span className="text-sm text-charcoal">{opt.text}</span>
+              <RichText text={opt.text} imageUrl={opt.imageUrl} className="text-sm text-charcoal" />
             </button>
           )
         })}
@@ -119,28 +120,31 @@ function renderCorrectAnswer(question: ReviewCard['question']) {
 
   if (question.type === 'MULTIPLE_CHOICE') {
     const correct = config.options?.find((opt: any) => opt.id === config.correctAnswer)
-    return correct?.text ?? config.correctAnswer
+    return { text: correct?.text ?? config.correctAnswer, imageUrl: correct?.imageUrl }
   }
 
   if (question.type === 'MULTIPLE_SELECT') {
-    return (config.correctAnswers ?? [])
-      .map((id: string) => config.options?.find((opt: any) => opt.id === id)?.text ?? id)
-      .join(', ')
+    return {
+      text: (config.correctAnswers ?? [])
+        .map((id: string) => config.options?.find((opt: any) => opt.id === id)?.text ?? id)
+        .join(', '),
+      imageUrl: undefined,
+    }
   }
 
   if (question.type === 'TRUE_FALSE') {
-    return String(config.correctAnswer)
+    return { text: String(config.correctAnswer), imageUrl: undefined }
   }
 
   if (question.type === 'FILL_BLANK') {
-    return (config.correctAnswers ?? []).join(', ')
+    return { text: (config.correctAnswers ?? []).join(', '), imageUrl: undefined }
   }
 
   if (question.type === 'ESSAY') {
-    return Array.isArray(config.rubric) ? config.rubric.join('\n') : config.rubric
+    return { text: Array.isArray(config.rubric) ? config.rubric.join('\n') : config.rubric, imageUrl: undefined }
   }
 
-  return ''
+  return { text: '', imageUrl: undefined }
 }
 
 const RATINGS = [
@@ -168,7 +172,7 @@ export default function ReviewPage() {
   const card = cards[index]
   const progressTotal = cards.length
   const correctAnswer = useMemo(
-    () => (card ? renderCorrectAnswer(card.question) : ''),
+    () => (card ? renderCorrectAnswer(card.question) : { text: '', imageUrl: undefined }),
     [card],
   )
 
@@ -251,9 +255,11 @@ export default function ReviewPage() {
 
         <div>
           <p className="text-xs text-stone mb-2">Question</p>
-          <h1 className="text-lg font-semibold text-nearblack leading-snug">
-            {card.question.content}
-          </h1>
+          <RichText
+            text={card.question.content}
+            imageUrl={card.question.config?.imageUrl}
+            className="text-lg font-semibold text-nearblack leading-snug"
+          />
         </div>
 
         {renderAnswerInput(card.question, answer, setAnswer)}
@@ -264,11 +270,13 @@ export default function ReviewPage() {
           <div className="space-y-4">
             <div className="bg-emerald-50 border border-emerald-100 rounded-comfortable p-4">
               <p className="text-xs text-stone mb-1">Correct answer</p>
-              <p className="text-sm text-emerald-900 whitespace-pre-wrap">{correctAnswer}</p>
+              <RichText
+                text={correctAnswer.text}
+                imageUrl={correctAnswer.imageUrl}
+                className="text-sm text-emerald-900"
+              />
               {card.question.config?.explanation && (
-                <p className="text-xs text-stone mt-3 italic">
-                  {card.question.config.explanation}
-                </p>
+                <RichText text={card.question.config.explanation} className="text-xs text-stone mt-3 italic" />
               )}
             </div>
 

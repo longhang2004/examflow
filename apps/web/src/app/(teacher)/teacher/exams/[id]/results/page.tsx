@@ -395,7 +395,10 @@ export default function ExamResultsPage() {
 
                 {selectedReport.isFlagged && (
                   <div className="bg-red-50 border border-red-200 rounded p-3">
-                    <p className="text-sm text-red-800 font-medium">⚠️ {selectedReport.flagReason}</p>
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-700" />
+                      <p className="text-sm text-red-800 font-medium">{selectedReport.flagReason}</p>
+                    </div>
                   </div>
                 )}
               </div>

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Copy, Check, Trash2, GripVertical } from 'lucide-react'
+import { Copy, Check, Trash2, GripVertical, Sparkles } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -27,13 +27,15 @@ import { Input } from '@/components/ui/Input'
 import { Badge, statusBadge } from '@/components/ui/Badge'
 import { Alert } from '@/components/ui/Alert'
 import { Modal } from '@/components/ui/Modal'
+import { AIGeneratorModal } from '@/components/teacher/AIGeneratorModal'
+import { RichText } from '@/components/ui/RichText'
 
 interface ExamQuestionItem {
   id: string
   questionId: string
   order: number
   point: number
-  question?: { content: string; type: string }
+  question?: { content: string; type: string; config?: any }
 }
 
 function SortableQuestion({
@@ -63,7 +65,11 @@ function SortableQuestion({
       )}
       {!isDraft && <GripVertical className="w-4 h-4 text-gray-200" />}
       <span className="text-xs text-stone w-6">{index + 1}.</span>
-      <p className="flex-1 text-sm text-charcoal truncate">{eq.question?.content}</p>
+      <RichText
+        text={eq.question?.content}
+        imageUrl={eq.question?.config?.imageUrl}
+        className="flex-1 text-sm text-charcoal line-clamp-2"
+      />
       <span className="text-xs text-stone">{eq.point}pt</span>
       {isDraft && (
         <button onClick={() => onRemove(eq.questionId)} className="text-silver hover:text-error">
@@ -80,6 +86,7 @@ export default function ExamDetailPage() {
   const router = useRouter()
   const [copied, setCopied] = useState(false)
   const [showQuestionModal, setShowQuestionModal] = useState(false)
+  const [showAIModal, setShowAIModal] = useState(false)
   const [selectedQuestions, setSelectedQuestions] = useState<Record<string, number>>({})
   const [qSearch, setQSearch] = useState('')
   const [saveError, setSaveError] = useState('')
@@ -225,9 +232,15 @@ export default function ExamDetailPage() {
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-charcoal">Questions ({questions.length})</h2>
             {isDraft && (
-              <Button variant="secondary" size="sm" onClick={() => setShowQuestionModal(true)}>
-                Add Questions
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setShowAIModal(true)}>
+                  <Sparkles className="w-4 h-4" />
+                  Generate with AI
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setShowQuestionModal(true)}>
+                  Add from Bank
+                </Button>
+              </div>
             )}
           </div>
 
@@ -270,7 +283,11 @@ export default function ExamDetailPage() {
                     return { ...prev, [q.id]: 1 }
                   })}>
                   <input type="checkbox" checked={selected} readOnly className="shrink-0" />
-                  <p className="flex-1 text-sm text-charcoal truncate">{q.content}</p>
+                  <RichText
+                    text={q.content}
+                    imageUrl={q.config?.imageUrl}
+                    className="flex-1 text-sm text-charcoal line-clamp-2"
+                  />
                   {selected && (
                     <input
                       type="number"
@@ -294,6 +311,17 @@ export default function ExamDetailPage() {
           </div>
         </div>
       </Modal>
+
+      <AIGeneratorModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        examId={id}
+        examQuestionStartOrder={questions.length}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['exam', id] })
+          setShowAIModal(false)
+        }}
+      />
     </div>
   )
 }

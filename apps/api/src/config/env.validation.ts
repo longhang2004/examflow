@@ -17,4 +17,6 @@ export const envValidationSchema = Joi.object({
   GEMINI_MODEL: Joi.string().optional().allow(''),
   GEMINI_BASE_URL: Joi.string().optional().allow(''),
   AI_MODEL: Joi.string().optional().allow(''),
+  CLOUDINARY_URL: Joi.string().optional().allow(''),
+  CLOUDINARY_FOLDER: Joi.string().optional().allow(''),
 });

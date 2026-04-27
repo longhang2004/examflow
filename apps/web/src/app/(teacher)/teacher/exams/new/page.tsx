@@ -10,6 +10,8 @@ import { api } from '@/lib/api-client'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
+import { Card } from '@/components/ui/Card'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 const schema = z.object({
   title: z.string().min(3, 'At least 3 characters'),
@@ -50,39 +52,47 @@ export default function NewExamPage() {
   })
 
   return (
-    <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-bold">Create New Exam</h1>
+    <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="max-w-2xl space-y-6">
+      <PageHeader
+        title="Create Exam"
+        description="Set the exam rules first. You can add questions or generate them with AI on the next screen."
+      />
 
       {error && <Alert type="error" message={error} />}
 
-      <Input label="Title" placeholder="Exam title" error={errors.title?.message} {...register('title')} />
+      <Card className="space-y-5">
+        <Input label="Title" placeholder="Midterm Physics Quiz" error={errors.title?.message} {...register('title')} />
 
-      <div>
-        <label className="text-sm font-medium text-gray-700">Description (optional)</label>
-        <textarea
-          className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-20"
-          placeholder="Exam description..."
-          {...register('description')}
-        />
-      </div>
+        <div>
+          <label className="text-sm font-medium text-charcoal">Description (optional)</label>
+          <textarea
+            className="mt-1 w-full border border-border-warm rounded-comfortable px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta min-h-20"
+            placeholder="Short note for students..."
+            {...register('description')}
+          />
+        </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Input label="Duration (minutes, 0 = unlimited)" type="number" placeholder="30" {...register('duration')} />
-        <Input label="Max Attempts" type="number" min="1" max="10" {...register('maxAttempts')} />
-      </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input label="Duration (minutes, 0 = unlimited)" type="number" placeholder="30" {...register('duration')} />
+          <Input label="Max Attempts" type="number" min="1" max="10" {...register('maxAttempts')} />
+        </div>
 
-      <div className="space-y-2">
-        {[
-          { name: 'shuffleQuestions', label: 'Shuffle questions' },
-          { name: 'shuffleOptions', label: 'Shuffle answer options' },
-          { name: 'showResultAfter', label: 'Show result after submission' },
-        ].map(({ name, label }) => (
-          <label key={name} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" {...register(name as any)} />
-            {label}
-          </label>
-        ))}
-      </div>
+        <div className="grid gap-2">
+          {[
+            { name: 'shuffleQuestions', label: 'Shuffle questions', description: 'Students see questions in different order.' },
+            { name: 'shuffleOptions', label: 'Shuffle answer options', description: 'Objective answer options are randomized.' },
+            { name: 'showResultAfter', label: 'Show result after submission', description: 'Students can review score and answers immediately.' },
+          ].map(({ name, label, description }) => (
+            <label key={name} className="flex items-start gap-3 rounded-comfortable border border-border-cream p-3 text-sm">
+              <input type="checkbox" className="mt-1" {...register(name as any)} />
+              <span>
+                <span className="block font-medium text-charcoal">{label}</span>
+                <span className="text-xs text-stone">{description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </Card>
 
       <div className="flex gap-3">
         <Button type="submit" loading={mutation.isPending}>Create Exam</Button>

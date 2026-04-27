@@ -7,6 +7,7 @@ import { api } from '@/lib/api-client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { RichText } from '@/components/ui/RichText'
 
 function formatStudentAnswer(answer: unknown, question: { type?: string; config?: unknown } | null) {
   if (answer == null || answer === '') {
@@ -16,18 +17,18 @@ function formatStudentAnswer(answer: unknown, question: { type?: string; config?
 
   switch (question?.type) {
     case 'MULTIPLE_CHOICE': {
-      const opts = (config?.options as Array<{ id: string; text: string }>) ?? []
+      const opts = (config?.options as Array<{ id: string; text: string; imageUrl?: string }>) ?? []
       const opt = opts.find((o) => o.id === answer)
-      return <span>{opt?.text ?? String(answer)}</span>
+      return <RichText text={opt?.text ?? String(answer)} imageUrl={opt?.imageUrl} />
     }
     case 'MULTIPLE_SELECT': {
       const arr = Array.isArray(answer) ? answer : []
-      const opts = (config?.options as Array<{ id: string; text: string }>) ?? []
+      const opts = (config?.options as Array<{ id: string; text: string; imageUrl?: string }>) ?? []
       return (
         <ul className="list-disc list-inside space-y-0.5 text-sm">
           {arr.map((id) => {
             const opt = opts.find((o) => o.id === id)
-            return <li key={String(id)}>{opt?.text ?? String(id)}</li>
+            return <li key={String(id)}><RichText text={opt?.text ?? String(id)} imageUrl={opt?.imageUrl} /></li>
           })}
         </ul>
       )
@@ -48,19 +49,19 @@ function formatCorrectAnswer(question: { type?: string; config?: unknown } | nul
 
   switch (question.type) {
     case 'MULTIPLE_CHOICE': {
-      const opts = (config.options as Array<{ id: string; text: string }>) ?? []
+      const opts = (config.options as Array<{ id: string; text: string; imageUrl?: string }>) ?? []
       const id = config.correctAnswer as string
       const opt = opts.find((o) => o.id === id)
-      return <span>{opt?.text ?? id}</span>
+      return <RichText text={opt?.text ?? id} imageUrl={opt?.imageUrl} />
     }
     case 'MULTIPLE_SELECT': {
       const ids = (config.correctAnswers as string[]) ?? []
-      const opts = (config.options as Array<{ id: string; text: string }>) ?? []
+      const opts = (config.options as Array<{ id: string; text: string; imageUrl?: string }>) ?? []
       return (
         <ul className="list-disc list-inside space-y-0.5 text-sm">
           {ids.map((id) => {
             const opt = opts.find((o) => o.id === id)
-            return <li key={id}>{opt?.text ?? id}</li>
+            return <li key={id}><RichText text={opt?.text ?? id} imageUrl={opt?.imageUrl} /></li>
           })}
         </ul>
       )
@@ -241,9 +242,11 @@ export default function AttemptResultPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-stone mb-1">Question {i + 1}</p>
-                    <p className="text-sm font-medium text-charcoal mb-2">
-                      {question?.content ?? 'Question'}
-                    </p>
+                    <RichText
+                      text={question?.content ?? 'Question'}
+                      imageUrl={(question?.config as any)?.imageUrl}
+                      className="text-sm font-medium text-charcoal mb-2"
+                    />
                     <div className="text-sm text-olive mb-2">
                       <span className="text-stone">Your answer: </span>
                       {formatStudentAnswer(a.answer, question ?? null)}
@@ -255,7 +258,7 @@ export default function AttemptResultPage() {
                       </div>
                     )}
                     {a.explanation && (
-                      <p className="text-xs text-stone mt-2 italic">{a.explanation}</p>
+                      <RichText text={a.explanation} className="text-xs text-stone mt-2 italic" />
                     )}
                     {a.pointEarned !== null && a.pointEarned !== undefined && (
                       <p className="text-xs text-stone mt-1">{a.pointEarned} pts earned</p>

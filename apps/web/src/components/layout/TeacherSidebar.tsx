@@ -20,7 +20,7 @@ export function TeacherSidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="w-64 bg-ivory border-r border-border-cream min-h-screen flex flex-col">
+    <aside className="hidden w-64 bg-ivory border-r border-border-cream min-h-screen flex-col md:flex">
       <div className="p-5 border-b border-border-cream">
         <h1 className="text-xl font-sans font-semibold tracking-tight text-nearblack">ExamFlow</h1>
         <p className="text-xs text-stone mt-0.5">Teacher Portal</p>

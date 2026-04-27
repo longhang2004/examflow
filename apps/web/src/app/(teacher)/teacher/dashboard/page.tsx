@@ -7,6 +7,8 @@ import { api } from '@/lib/api-client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge, statusBadge } from '@/components/ui/Badge'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 export default function TeacherDashboardPage() {
   const { data: exams } = useQuery({
@@ -32,12 +34,22 @@ export default function TeacherDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">Dashboard</h1>
-        <p className="text-olive mt-1">Welcome back. Here&apos;s an overview of your content.</p>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description="Overview of your exams, question bank, and publishing status."
+        actions={
+          <>
+            <Link href="/teacher/questions/new">
+              <Button>Create Question</Button>
+            </Link>
+            <Link href="/teacher/exams/new">
+              <Button variant="secondary">Create Exam</Button>
+            </Link>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {stats.map((s) => (
           <Card key={s.label} variant="elevated">
             <div className="flex items-center gap-4">
@@ -51,15 +63,6 @@ export default function TeacherDashboardPage() {
             </div>
           </Card>
         ))}
-      </div>
-
-      <div className="flex gap-3">
-        <Link href="/teacher/questions/new">
-          <Button>Create Question</Button>
-        </Link>
-        <Link href="/teacher/exams/new">
-          <Button variant="secondary">Create Exam</Button>
-        </Link>
       </div>
 
       {exams?.data?.length > 0 && (
@@ -78,6 +81,19 @@ export default function TeacherDashboardPage() {
             ))}
           </div>
         </Card>
+      )}
+
+      {exams?.data?.length === 0 && (
+        <EmptyState
+          icon={<FileText className="h-5 w-5" />}
+          title="No exams yet"
+          description="Create an exam, then add questions from the bank or generate them with AI."
+          action={
+            <Link href="/teacher/exams/new">
+              <Button>Create Exam</Button>
+            </Link>
+          }
+        />
       )}
     </div>
   )

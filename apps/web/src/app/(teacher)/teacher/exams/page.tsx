@@ -3,12 +3,16 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { Plus, Copy, Check } from 'lucide-react'
+import { Plus, Copy, Check, FileText } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { Exam } from '@examflow/types'
 import { Button } from '@/components/ui/Button'
 import { Badge, statusBadge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 
 export default function ExamsPage() {
   const [status, setStatus] = useState('')
@@ -27,29 +31,30 @@ export default function ExamsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-sans font-semibold tracking-tight text-nearblack">My Exams</h1>
-        <Link href="/teacher/exams/new">
-          <Button><Plus className="w-4 h-4" />Create Exam</Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Exams"
+        description="Draft, publish, and monitor exams from one place."
+        actions={
+          <Link href="/teacher/exams/new">
+            <Button><Plus className="w-4 h-4" />Create Exam</Button>
+          </Link>
+        }
+      />
 
-      <div className="flex gap-2">
-        {['', 'DRAFT', 'PUBLISHED', 'ARCHIVED'].map((s) => (
-          <button
-            key={s}
-            onClick={() => setStatus(s)}
-            className={`px-3 py-1.5 text-sm rounded-full border transition ${
-              status === s ? 'bg-terracotta text-white border-terracotta' : 'border-border-warm text-olive hover:border-gray-400'
-            }`}
-          >
-            {s || 'All'}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        ariaLabel="Filter exams by status"
+        value={status}
+        onChange={setStatus}
+        options={[
+          { value: '', label: 'All' },
+          { value: 'DRAFT', label: 'Draft' },
+          { value: 'PUBLISHED', label: 'Published' },
+          { value: 'ARCHIVED', label: 'Archived' },
+        ]}
+      />
 
       {isLoading ? (
-        <p className="text-stone">Loading...</p>
+        <LoadingState label="Loading exams..." />
       ) : (
         <div className="grid gap-4">
           {data?.data?.map((exam: any) => (
@@ -78,7 +83,7 @@ export default function ExamsPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex shrink-0 flex-wrap gap-2">
                   <Link href={`/teacher/exams/${exam.id}`}>
                     <Button variant="secondary" size="sm">Edit</Button>
                   </Link>
@@ -93,12 +98,16 @@ export default function ExamsPage() {
           ))}
 
           {data?.data?.length === 0 && (
-            <div className="text-center py-12 text-stone">
-              <p>No exams found.</p>
+            <EmptyState
+              icon={<FileText className="h-5 w-5" />}
+              title="No exams found"
+              description={status ? 'No exams match this status filter.' : 'Create your first exam, then add questions or generate them from a file.'}
+              action={
               <Link href="/teacher/exams/new">
-                <Button className="mt-4">Create your first exam</Button>
+                <Button>Create Exam</Button>
               </Link>
-            </div>
+              }
+            />
           )}
         </div>
       )}
