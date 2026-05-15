@@ -47,6 +47,21 @@ enum ParentStudentStatus {
   REJECTED
 }
 
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
 model User {
   id             String        @id @default(uuid())
   email          String        @unique
@@ -68,6 +83,7 @@ model User {
   ownedOrgs  Organization[]  @relation("OrgOwner")
   parentOf   ParentStudent[] @relation("Parent")
   studentOf  ParentStudent[] @relation("Student")
+  subscriptions Subscription[]
 }
 
 model Organization {
@@ -83,6 +99,69 @@ model Organization {
 
   questions Question[]
   exams     Exam[]
+  subscriptions Subscription[]
+}
+
+model BillingPlan {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  displayName   String
+  price         Float
+  priceVND      Int
+  interval      String
+  stripePriceId String?
+  features      Json
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  subscriptions Subscription[]
+
+  @@index([isActive])
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  userId               String?
+  user                 User?              @relation(fields: [userId], references: [id])
+  organizationId       String?
+  organization         Organization?      @relation(fields: [organizationId], references: [id])
+  planId               String
+  plan                 BillingPlan        @relation(fields: [planId], references: [id])
+  status               SubscriptionStatus @default(ACTIVE)
+  stripeSubscriptionId String?            @unique
+  stripeCustomerId     String?
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean            @default(false)
+  canceledAt           DateTime?
+  trialEndsAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  invoices Invoice[]
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  subscriptionId  String
+  subscription    Subscription  @relation(fields: [subscriptionId], references: [id])
+  stripeInvoiceId String?       @unique
+  vnpayTxnRef     String?       @unique
+  amount          Float
+  currency        String        @default("USD")
+  amountVND       Int?
+  status          InvoiceStatus @default(PENDING)
+  paymentMethod   String?
+  paidAt          DateTime?
+  hostedUrl       String?
+  createdAt       DateTime      @default(now())
+
+  @@index([subscriptionId])
+  @@index([status])
 }
 
 model Question {

@@ -29,9 +29,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
         : message;
 
     const code =
-      exception instanceof HttpException
-        ? exception.constructor.name.replace('Exception', '').toUpperCase()
-        : 'INTERNAL_SERVER_ERROR';
+      exception instanceof HttpException && typeof message === 'object' && 'code' in (message as object)
+        ? (message as any).code
+        : exception instanceof HttpException
+          ? exception.constructor.name.replace('Exception', '').toUpperCase()
+          : 'INTERNAL_SERVER_ERROR';
 
     response.status(status).json({
       success: false,

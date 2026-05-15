@@ -20,4 +20,12 @@ export const envValidationSchema = Joi.object({
   AI_RATE_LIMIT_PER_HOUR: Joi.number().integer().min(0).optional(),
   CLOUDINARY_URL: Joi.string().optional().allow(''),
   CLOUDINARY_FOLDER: Joi.string().optional().allow(''),
+  STRIPE_SECRET_KEY: Joi.string().optional().allow(''),
+  STRIPE_WEBHOOK_SECRET: Joi.string().optional().allow(''),
+  STRIPE_SUCCESS_URL: Joi.string().optional().allow(''),
+  STRIPE_CANCEL_URL: Joi.string().optional().allow(''),
+  VNPAY_TMN_CODE: Joi.string().optional().allow(''),
+  VNPAY_HASH_SECRET: Joi.string().optional().allow(''),
+  VNPAY_PAYMENT_URL: Joi.string().optional().allow(''),
+  VNPAY_RETURN_URL: Joi.string().optional().allow(''),
 });

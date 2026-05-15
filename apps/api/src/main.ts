@@ -7,7 +7,7 @@ import { TransformResponseInterceptor } from './common/interceptors/transform-re
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   const allowedOrigins = [
     process.env.FRONTEND_URL,
@@ -62,6 +62,7 @@ Errors use the global response envelope: \`{ success: false, error: { code, mess
     .addTag('Parent', 'Parent/student linking and progress views')
     .addTag('Anti-cheat', 'Exam monitoring events and reports')
     .addTag('Uploads', 'Media upload endpoints')
+    .addTag('Billing', 'Subscription plans, invoices, checkout, and payment webhooks')
     .addTag('Health', 'Service health checks')
     .build();
 
