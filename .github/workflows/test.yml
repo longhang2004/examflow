@@ -37,6 +37,7 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec prisma generate
       - run: pnpm --filter api test:cov
       - run: pnpm --filter web test -- --runInBand
         env:
